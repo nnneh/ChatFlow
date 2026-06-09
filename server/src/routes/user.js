@@ -1,11 +1,13 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import User from "../models/user.js"
 const auth = require('../middleware/auth');
-const router = express.Router();
+
+const userRouter = Router()
+
 
 // Register new user
-router.post('/register', async (req, res) => {
+UserRouter.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -39,7 +41,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user
-router.post('/login', async (req, res) => {
+UserRouter.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -75,7 +77,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Get current user
-router.get('/me', auth, async (req, res) => {
+UserRouter.get('/me', auth, async (req, res) => {
   try {
     res.json({
       user: {
@@ -91,7 +93,7 @@ router.get('/me', auth, async (req, res) => {
 });
 
 // Get all users (for contact list)
-router.get('/users', auth, async (req, res) => {
+UserRouter.get('/users', auth, async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.userId } })
       .select('id username email online')
@@ -103,4 +105,4 @@ router.get('/users', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = UserRouter;
