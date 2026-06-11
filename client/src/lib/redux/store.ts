@@ -1,40 +1,33 @@
-import { configureStore, combineReducers } from "@reduxjs/toolkit";
-import {
-  persistStore,
-  persistReducer,
-  FLUSH,
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
+import userSlice from "./features/userSlice";
+import { persistStore, persistReducer,  FLUSH,
   REHYDRATE,
   PAUSE,
   PERSIST,
   PURGE,
-  REGISTER,
-} from "redux-persist";
+  REGISTER } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-// import counterSlice from "./reducerSlices/counterSlice";
-// import userSlice from "../features/userSlice";
-import reduxLogger from "redux-logger"; // Assuming @types/redux-logger is installed
-
-const rootReducer = combineReducers({
-//   counter: counterSlice,
-  user: userSlice,
-});
-
+// import logger from 'redux-logger';
+// import  notificationSlice  from './features/notification/notificationSlice';
 const persistConfig = {
-  key: "root",
-  storage,
-};
-
+    key: "root",
+    storage,
+    blacklist: ['notification']
+  };
+const rootReducer = combineReducers({ 
+    user: userSlice,
+    // notification: notificationSlice
+})
+  
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) => // <--- This is the key change!
-    getDefaultMiddleware({
-      // Redux-persist dispatches non-serializable actions, so we need to ignore them
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-      },
-    }).concat(reduxLogger), // <--- Use .concat() to add your custom middleware
-});
+  middleware:(getDefaultMiddleware)=> getDefaultMiddleware({
+    serializableCheck: {
+      ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+    },
+  })
+})
 
 export const persistor = persistStore(store);

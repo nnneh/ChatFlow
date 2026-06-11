@@ -1,32 +1,55 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { loadUserInfo } from "@/lib/redux/features/loginInfoSlice";
+import axios from "axios";
 import Link from "next/link";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { loginUser, clearError } from "@/redux/slices/authSlice";
-import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { set, useForm } from "react-hook-form";
+import toast, { Toaster } from "react-hot-toast";
+import { FaEnvelope, FaLock, FaArrowRight } from "react-icons/fa";
+import { useDispatch } from "react-redux";
+import { Loader2 } from "lucide-react";
+import { io } from "socket.io-client";
+import socket from "@/lib/socket";
 
-export default function LoginPage() {
-  const dispatch = useAppDispatch();
+const LoginForm = () => {
+  const dispatch = useDispatch();
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
-  const { loading, error, user } = useAppSelector((s) => s.auth);
 
-  const [form, setForm] = useState({ email: "", password: "" });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm();
 
-  useEffect(() => {
-    if (user) router.push("/chat");
-  }, [user, router]);
+  const handleLogin = async (data) => {
+    try {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_URL}/login`, data, {
+        withCredentials: true,
+      });
 
-  useEffect(() => {
-    if (error) { toast.error(error); dispatch(clearError()); }
-  }, [error, dispatch]);
+      if (response.status === 200) {
+        const { message, user } = response.data;
+        dispatch(loadUserInfo(user));
+        socket.emit("login", user?._id);
+        toast.success(message + " to " + user.username);
+        router.push("/kurakani/chat");
+      }
+    } catch (error) {
+      const { message } = error.response.data;
+      if (error.response) {
+        if (error.response.status === 404) {
+          toast.error(message);
+        }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = await dispatch(loginUser(form));
-    if (loginUser.fulfilled.match(result)) {
-      toast.success("Welcome back!");
-      router.push("/chat");
+        if (error.response.status === 401) {
+          toast.error(message);
+        }
+        if (error.response.status === 500) {
+          toast.error(message);
+        }
+      }
     }
   };
 
