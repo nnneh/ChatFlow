@@ -1,10 +1,10 @@
-import express from 'express';
+import { Router } from "express"
 import jwt from 'jsonwebtoken';
-import User from "../models/user.js"
-const auth = require('../middleware/auth');
+import User from "../models/userModel.js"
+import verifyLogin from "../middleware/authMiddleware.js";
 
-const userRouter = Router()
-
+const UserRouter = Router()
+const auth = verifyLogin
 
 // Register new user
 UserRouter.post('/register', async (req, res) => {
@@ -105,4 +105,4 @@ UserRouter.get('/users', auth, async (req, res) => {
   }
 });
 
-module.exports = UserRouter;
+export default UserRouter
