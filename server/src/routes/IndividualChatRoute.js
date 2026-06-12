@@ -2,10 +2,10 @@ import mongoose from "mongoose";
 import { Message } from "../model/messageModel.js";
 import { IndividualChat } from "../model/individualChatModel.js";
 import { User } from "../model/userModel.js";
-import { FriendRequest } from "../model/friendRequestModel.js";
+import { AddFriend } from "../model/addFriendModel.js";
 
 // ==========================================
-// 1. GET OR CREATE CHAT (Simplified)
+// 1. GET OR CREATE CHAT 
 // ==========================================
 const getOrCreateChat = async (req, res) => {
   try {
@@ -150,7 +150,7 @@ const disconnectFriend = async (req, res) => {
     const userIds = chat.participants.map((id) => id.toString());
     
     // Clean up related friend requests, the chat record, and related text logs
-    await FriendRequest.deleteOne({ 
+    await AddFriend.deleteOne({ 
       $or: [
         { sender: userIds[0], receiver: userIds[1] }, 
         { sender: userIds[1], receiver: userIds[0] }
