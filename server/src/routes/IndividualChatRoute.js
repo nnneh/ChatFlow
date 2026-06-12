@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { Message } from "../model/messageModel.js";
-import { IndividualChat } from "../model/singleChatModel.js";
+import { IndividualChat } from "../model/individualChatModel.js";
 import { User } from "../model/userModel.js";
 import { FriendRequest } from "../model/friendRequestModel.js";
 
