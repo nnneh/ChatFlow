@@ -61,7 +61,6 @@ ChatFlow/
 │   └── utils/
 │
 ├── server/
-│   ├── controllers/
 │   ├── models/
 │   ├── routes/
 │   ├── middleware/
