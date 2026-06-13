@@ -1,8 +1,7 @@
 "use client";
-// import FriendListHeader from '@/components/groupComponents/FriendListHeader'
-import GroupChat from "@/components/groupComponents/GroupChat";
-import GroupList from "@/components/groupComponents/GroupList";
-import GroupListHeader from "@/components/groupComponents/GroupListHeader";
+import GroupChat from "@/src/components/groupComponents/groupChat";
+import GroupList from "@/src/components/groupComponents/groupList";
+import GroupListHeader from "@/src/components/groupComponents/groupListHeader";
 import React, { useState } from "react";
 
 const Group = () => {
