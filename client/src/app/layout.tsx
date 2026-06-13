@@ -29,13 +29,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <ReduxProvider>
+      {/* 1. All visible content and providers must live inside the body */}
+      <body className="min-h-full flex flex-col">
+        <ReduxProvider>
           {children}
-        <Toaster position="bottom-right" />
+          <Toaster position="bottom-right" />
         </ReduxProvider>
-
-      <body className="min-h-full flex flex-col">{children}</body>
+      </body>
     </html>
   );
 }
-
