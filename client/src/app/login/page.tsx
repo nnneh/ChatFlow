@@ -1,5 +1,5 @@
 "use client";
-import { loadUserInfo } from "@/src/lib/redux/features/userSlice";
+import { loadUserInfo } from "@/lib/redux/features/userSlice";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,7 +32,7 @@ const LoginForm = () => {
         const { message, user } = response.data;
         dispatch(loadUserInfo(user))
         toast.success(message + " to " + user.username);
-        router.push("/kurakani/chat");
+        router.push("/chatflow/chat");
       }
     } catch (error) {
       const { message } = error.response.data;

@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import GroupChat from "@/src/components/groupComponents/groupChat";
-import GroupList from "@/src/components/groupComponents/groupList";
-import GroupListHeader from "@/src/components/groupComponents/groupListHeader";
+import GroupChat from "@/components/groupComponents/groupChat";
+import GroupList from "@/components/groupComponents/groupList";
+import GroupListHeader from "@/components/groupComponents/groupListHeader";
 
 // 1. Define the Group shape to match your backend model structure
 interface GroupType {
