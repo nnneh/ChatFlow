@@ -1,5 +1,5 @@
 "use client"
-// import { createFileRoute, Link } from "@tanstack/react-router";
+
 import Link from "next/link";
 import React, { useState, useRef, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
@@ -12,15 +12,11 @@ import {
   FaEllipsisVertical,
   FaCircleCheck,
 } from "react-icons/fa6";
-export const Route = createFileRoute("/chat")({
-  head: () => ({
-    meta: [
-      { title: "ChatFlow" },
-      { name: "description", content: "Chat with your friends on chatflow" },
-    ],
-  }),
-  component: ChatPage,
-});
+
+// Note: In Next.js App Router, metadata for 'use client' components is usually 
+// handled via a separate layout, or a wrapper component. For now, we've safely 
+// stripped the TanStack wrapper so this page can compile without errors.
+
 type Friend = {
   id: string;
   username: string;
@@ -30,12 +26,14 @@ type Friend = {
   unread: number;
   online: boolean;
 };
+
 type Message = {
   id: string;
   text: string;
   sender: "me" | "them";
   time: string;
 };
+
 const MOCK_FRIENDS: Friend[] = [
   { id: "1", username: "Aarya Sharma", avatar: "🌸", lastMessage: "See you tomorrow!", time: "2m", unread: 2, online: true },
   { id: "2", username: "Bishal Thapa", avatar: "🐰", lastMessage: "Haha that's hilarious 😂", time: "12m", unread: 0, online: true },
@@ -44,6 +42,7 @@ const MOCK_FRIENDS: Friend[] = [
   { id: "5", username: "Priya Adhikari", avatar: "🌷", lastMessage: "Thank youuu 💕", time: "1d", unread: 0, online: true },
   { id: "6", username: "Roshan KC", avatar: "🐻", lastMessage: "Okay sounds good", time: "2d", unread: 0, online: false },
 ];
+
 const MOCK_MESSAGES: Message[] = [
   { id: "m1", text: "Hey! How are you doing? 🌸", sender: "them", time: "10:24 AM" },
   { id: "m2", text: "I'm great! Just working on some designs", sender: "me", time: "10:25 AM" },
@@ -52,18 +51,22 @@ const MOCK_MESSAGES: Message[] = [
   { id: "m5", text: "They look amazing 😍", sender: "them", time: "10:28 AM" },
   { id: "m6", text: "See you tomorrow!", sender: "them", time: "10:30 AM" },
 ];
+
 function ChatPage() {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [search, setSearch] = useState("");
   const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
   const filtered = MOCK_FRIENDS.filter((f) =>
     f.username.toLowerCase().includes(search.toLowerCase())
   );
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, selectedFriend]);
+
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.trim()) return;
@@ -78,6 +81,7 @@ function ChatPage() {
     ]);
     setDraft("");
   };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-emerald-50 p-2 sm:p-4">
       <Toaster position="top-center" />
@@ -96,7 +100,7 @@ function ChatPage() {
           <div className="p-5 border-b border-pink-100/60">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-                Kurakani
+                ChatFlow
               </h1>
               <button className="w-9 h-9 rounded-full bg-white/70 hover:bg-white flex items-center justify-center text-slate-500 transition-all hover:scale-105">
                 <FaEllipsisVertical className="text-sm" />
@@ -157,7 +161,8 @@ function ChatPage() {
             )}
           </div>
           <div className="p-3 border-t border-pink-100/60 text-center">
-            <Link to="/login" className="text-xs text-slate-400 hover:text-pink-500 transition">
+            {/* ✅ FIXED: Changed 'to="/login"' to 'href="/login"' for Next.js */}
+            <Link href="/login" className="text-xs text-slate-400 hover:text-pink-500 transition">
               Made with 🌸
             </Link>
           </div>
@@ -290,4 +295,5 @@ function ChatPage() {
     </div>
   );
 }
+
 export default ChatPage;

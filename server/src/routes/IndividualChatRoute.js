@@ -1,13 +1,19 @@
+import express from "express";
 import mongoose from "mongoose";
+import verifyLogin from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/uploadFileMiddleware.js";
 import { Message } from "../model/messageModel.js";
 import { IndividualChat } from "../model/individualChatModel.js";
 import { User } from "../model/userModel.js";
 import { AddFriend } from "../model/addFriendModel.js";
 
-// ==========================================
-// 1. GET OR CREATE CHAT 
-// ==========================================
-const getOrCreateChat = async (req, res) => {
+const chatRouter = express.Router();
+
+// Apply auth middleware to all individual chat routes
+chatRouter.use(verifyLogin);
+
+// Get or Create Chat Room
+chatRouter.post("/chat", async (req, res) => {
   try {
     const { partnerId } = req.body;
 
@@ -39,12 +45,39 @@ const getOrCreateChat = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-// ==========================================
-// 2. SEND MESSAGE (No Files, Just Text)
-// ==========================================
-const sendMessage = async (req, res) => {
+// Get My Messages (Simplified)
+chatRouter.get("/myMessages/:chatId", async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    const messages = await Message.find({
+      chatId,
+      chatType: "IndividualChat",
+    }).populate("sender");
+
+    if (messages.length === 0) {
+      return res.status(404).json({ message: "No Messages Found" });
+    }
+
+    const formattedMessages = messages.map(({ sender, content, createdAt }) => ({
+      sender: sender._id.toString() === req.userID ? "You" : sender.username,
+      senderId: sender._id,
+      avatar: sender.avatar,
+      content,
+      createdAt,
+    }));
+
+    return res.status(200).json({ messages: formattedMessages });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Failure" });
+  }
+});
+
+// Send Message (No Files, Just Text)
+chatRouter.post("/message/:chatId", upload.array("file"), async (req, res) => {
   try {
     const { chatId } = req.params;
     const { content } = req.body;
@@ -94,43 +127,10 @@ const sendMessage = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-// ==========================================
-// 3. GET MY MESSAGES (Simplified)
-// ==========================================
-const getMyMessages = async (req, res) => {
-  try {
-    const { chatId } = req.params;
-
-    const messages = await Message.find({
-      chatId,
-      chatType: "IndividualChat",
-    }).populate("sender");
-
-    if (messages.length === 0) {
-      return res.status(404).json({ message: "No Messages Found" });
-    }
-
-    const formattedMessages = messages.map(({ sender, content, createdAt }) => ({
-      sender: sender._id.toString() === req.userID ? "You" : sender.username,
-      senderId: sender._id,
-      avatar: sender.avatar,
-      content,
-      createdAt,
-    }));
-
-    return res.status(200).json({ messages: formattedMessages });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Internal Failure" });
-  }
-};
-
-// ==========================================
-// 4. DISCONNECT FRIEND (Basic Cleanup)
-// ==========================================
-const disconnectFriend = async (req, res) => {
+// Disconnect Friend (Basic Cleanup)
+chatRouter.delete("/remove/:chatId", async (req, res) => {
   try {
     const { chatId } = req.params;
 
@@ -169,6 +169,6 @@ const disconnectFriend = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-export { getOrCreateChat, sendMessage, getMyMessages, disconnectFriend };
+export default chatRouter;
