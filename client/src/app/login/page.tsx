@@ -33,7 +33,7 @@ const LoginForm = () => {
         const { message, user } = response.data;
         dispatch(loadUserInfo(user));
         toast.success(message + " to " + user.username);
-        router.push("/chatflow/chat");
+        router.push("/chat");
       }
     } catch (error) {
       // Safely check if error.response and data exist using optional chaining (?.)
