@@ -4,12 +4,12 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { set, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import toast, { Toaster } from "react-hot-toast";
 import { FaEnvelope, FaLock, FaArrowRight, FaFacebook, FaGoogle } from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-
+import Image from "next/image";
 
 const LoginForm = () => {
   const dispatch = useDispatch();
@@ -31,24 +31,17 @@ const LoginForm = () => {
 
       if (response.status === 200) {
         const { message, user } = response.data;
-        dispatch(loadUserInfo(user))
+        dispatch(loadUserInfo(user));
         toast.success(message + " to " + user.username);
         router.push("/chatflow/chat");
       }
     } catch (error) {
-      const { message } = error.response.data;
-      if (error.response) {
-        if (error.response.status === 404) {
-          toast.error(message);
-        }
-
-        if (error.response.status === 401) {
-          toast.error(message);
-        }
-        if (error.response.status === 500) {
-          toast.error(message);
-        }
-      }
+      // Safely check if error.response and data exist using optional chaining (?.)
+      // Falls back to a helpful string if the server is completely offline
+      const errorMessage = error.response?.data?.message || "Could not connect to the server. Please try again.";
+      
+      toast.error(errorMessage);
+      console.error("Login error context:", error);
     }
   };
 
@@ -67,7 +60,14 @@ const LoginForm = () => {
           {/* Header */}
           <div className="relative px-8 pt-10 pb-8 text-center bg-gradient-to-br from-[#FBCFE8] via-[#DDD6FE] to-[#A7F3D0]">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/70 shadow-md backdrop-blur">
-              <span className="text-2xl">💬</span>
+              <Image
+                className="object-contain"
+                src="/Pastel Chatflow Logo.png"
+                alt="Logo"
+                width={120}
+                height={120}
+                priority
+              />
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-800">
               ChatFlow
@@ -95,7 +95,7 @@ const LoginForm = () => {
                 </div>
                 {errors.email && (
                   <p className="mt-1 ml-2 text-xs text-rose-500">
-                    {errors.email.message}
+                    {errors.email.message as string}
                   </p>
                 )}
               </div>
@@ -105,23 +105,22 @@ const LoginForm = () => {
                 <div className="group relative">
                   <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-500 transition" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     {...register("password", { required: "Password is required" })}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/60 focus:border-indigo-300 transition"
+                    className="w-full pl-11 pr-11 py-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/60 focus:border-indigo-300 transition"
                   />
                   <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors"
-                        style={{ color: themeColors.neutral, '--tw-text-hover-color': themeColors.primary }}
-                      >
-                        {showPassword ? <EyeOff /> : <Eye />}
-                      </button>
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 hover:text-indigo-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
                 {errors.password && (
                   <p className="mt-1 ml-2 text-xs text-rose-500">
-                    {errors.password.message}
+                    {errors.password.message as string}
                   </p>
                 )}
               </div>
@@ -195,10 +194,6 @@ const LoginForm = () => {
             </div>
           </div>
         </div>
-
-        {/* <p className="mt-5 text-center text-xs text-slate-400">
-          Made with 🌸 for cozy conversations
-        </p> */}
       </div>
     </div>
   );

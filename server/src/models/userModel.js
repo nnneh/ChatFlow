@@ -18,18 +18,25 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  online: {
-    type: Boolean,
-    default: false
-  },
   socketId: {
     type: String
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  // createdAt: {
+  //   type: Date,
+  //   default: Date.now
+  // },
+       avatar: {
+        type: String,  
+      },
+      isOnline: {
+        type: Boolean,
+        default: false
+      },
+      refreshToken: {
+        type: String,
+        default: null
+      },
+},{timestamps: true})
 
 // Hash password before saving
 // UserSchema.pre('save', async function(next) {
@@ -44,17 +51,16 @@ const UserSchema = new mongoose.Schema({
 //   }
 // });
 
+
+// Hash password before saving
 UserSchema.pre('save', async function () {
-  // If the password hasn't been modified, just return early to stop execution
   if (!this.isModified('password')) {
     return; 
   }
 
   try {
-    // Hash the password cleanly using await
     this.password = await bcrypt.hash(this.password, 10);
   } catch (error) {
-    // If something goes wrong with bcrypt, throw the error to pass it to your route's catch block
     throw error; 
   }
 });
@@ -64,5 +70,24 @@ UserSchema.methods.comparePassword = async function(password) {
   return await bcrypt.compare(password, this.password);
 };
  
+
+// Generate short-lived access token (15 min)
+UserSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
+    { userId: this._id, username: this.username },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || '15m' }
+  );
+};
+ 
+// Generate long-lived refresh token (7 days)
+UserSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    { userId: this._id },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || '7d' }
+  );
+};
+
 const User = mongoose.model('User', UserSchema);
 export default User;

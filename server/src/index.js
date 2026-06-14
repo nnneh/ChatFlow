@@ -10,6 +10,7 @@ import http from "http";
 import { Server } from "socket.io";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from "cookie-parser";
 
 
 const filename = fileURLToPath(import.meta.url);
@@ -31,6 +32,7 @@ const io = new Server(server, {
 connect()
 app.use(cors())
 app.use(express.json()) 
+app.use(cookieParser())
 
 // Add this line to serve static files (uploaded images)
 app.use('/uploads', express.static(path.join(dirname, 'uploads')));

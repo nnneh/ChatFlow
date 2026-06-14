@@ -1,12 +1,43 @@
 import { Router } from "express";
-import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
 import verifyLogin from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadFileMiddleware.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js"; 
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const UserRouter = Router();
 const auth = verifyLogin;
+
+// ─── Cookie options ───────────────────────────────────────────────────────────
+const cookieOptions = {
+  httpOnly: true,   // JS can't access — protects against XSS
+  secure: process.env.NODE_ENV === "production", // HTTPS only in prod
+  sameSite: "strict",
+};
+
+const accessTokenCookieOptions = {
+  ...cookieOptions,
+  maxAge: 15 * 60 * 1000, // 15 minutes
+};
+
+const refreshTokenCookieOptions = {
+  ...cookieOptions,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
+// ─── Helper: generate both tokens and save refresh token to DB ────────────────
+const generateTokensAndSetCookies = async (user, res) => {
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+
+  // Save refresh token in DB
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+
+  return { accessToken, refreshToken };
+};
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 UserRouter.post("/register", upload.single("avatar"), async (req, res) => {
@@ -35,13 +66,11 @@ UserRouter.post("/register", upload.single("avatar"), async (req, res) => {
     const user = new User({ username, email, password, avatar: avatarUrl });
     await user.save();
 
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "7d",
-    });
+    const { accessToken, refreshToken } = await generateTokensAndSetCookies(user, res);
 
     res.status(201).json({
       message: "User registered successfully",
-      token,
+      accessToken, // also sent in body for clients that prefer header-based auth
       user: {
         id: user._id,
         username: user.username,
@@ -60,6 +89,10 @@ UserRouter.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -70,13 +103,11 @@ UserRouter.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "7d",
-    });
+    const { accessToken } = await generateTokensAndSetCookies(user, res);
 
     res.json({
       message: "Login successful",
-      token,
+      accessToken,
       user: {
         id: user._id,
         username: user.username,
@@ -90,6 +121,56 @@ UserRouter.post("/login", async (req, res) => {
   }
 });
 
+// ─── Refresh access token ─────────────────────────────────────────────────────
+UserRouter.post("/refresh-token", async (req, res) => {
+  try {
+    const incomingRefreshToken =
+      req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (!incomingRefreshToken) {
+      return res.status(401).json({ message: "Refresh token missing" });
+    }
+
+    // Verify the refresh token
+    let decoded;
+    try {
+      decoded = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    } catch {
+      return res.status(401).json({ message: "Invalid or expired refresh token" });
+    }
+
+    // Find user and check token matches what's stored
+    const user = await User.findById(decoded.userId);
+    if (!user || user.refreshToken !== incomingRefreshToken) {
+      return res.status(401).json({ message: "Refresh token mismatch or user not found" });
+    }
+
+    const { accessToken } = await generateTokensAndSetCookies(user, res);
+
+    res.json({ message: "Token refreshed", accessToken });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// ─── Logout ───────────────────────────────────────────────────────────────────
+UserRouter.post("/logout", auth, async (req, res) => {
+  try {
+    // Clear refresh token from DB
+    await User.findByIdAndUpdate(req.user._id, { refreshToken: null });
+
+    // Clear cookies
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
+
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ─── Get current user ─────────────────────────────────────────────────────────
 UserRouter.get("/me", auth, async (req, res) => {
   try {
@@ -99,7 +180,7 @@ UserRouter.get("/me", auth, async (req, res) => {
         username: req.user.username,
         email: req.user.email,
         avatar: req.user.avatar,
-        online: req.user.online,
+        online: req.user.isOnline,
       },
     });
   } catch (error) {
@@ -111,7 +192,7 @@ UserRouter.get("/me", auth, async (req, res) => {
 UserRouter.get("/users", auth, async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.user._id } })
-      .select("id username email avatar online")
+      .select("username email avatar isOnline")
       .lean();
 
     res.json({ users });
