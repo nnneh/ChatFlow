@@ -1,108 +1,123 @@
-import { Router } from "express"
-import jwt from 'jsonwebtoken';
-import User from "../models/userModel.js"
+import { Router } from "express";
+import jwt from "jsonwebtoken";
+import User from "../models/userModel.js";
 import verifyLogin from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/uploadFileMiddleware.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js"; 
 
-const UserRouter = Router()
-const auth = verifyLogin
+const UserRouter = Router();
+const auth = verifyLogin;
 
-// Register new user
-UserRouter.post('/register', async (req, res) => {
+// ─── Register ─────────────────────────────────────────────────────────────────
+UserRouter.post("/register", upload.single("avatar"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Create new user
-    const user = new User({ username, email, password });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ message: "User already exists" });
+    }
+
+    // Upload avatar to Cloudinary if provided
+    let avatarUrl = null;
+    if (req.file) {
+      const result = await uploadOnCloudinary(req.file.path);
+      if (!result) {
+        return res.status(500).json({ message: "Avatar upload failed" });
+      }
+      avatarUrl = result.optimizeUrl;
+    }
+
+    const user = new User({ username, email, password, avatar: avatarUrl });
     await user.save();
 
-    // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d'
+    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
+      expiresIn: "7d",
     });
 
     res.status(201).json({
-      message: 'User registered successfully',
+      message: "User registered successfully",
       token,
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
-      }
+        email: user.email,
+        avatar: user.avatar,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("Register error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Login user
-UserRouter.post('/login', async (req, res) => {
+// ─── Login ────────────────────────────────────────────────────────────────────
+UserRouter.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d'
+    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
+      expiresIn: "7d",
     });
 
     res.json({
-      message: 'Login successful',
+      message: "Login successful",
       token,
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
-      }
+        email: user.email,
+        avatar: user.avatar,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Get current user
-UserRouter.get('/me', auth, async (req, res) => {
+// ─── Get current user ─────────────────────────────────────────────────────────
+UserRouter.get("/me", auth, async (req, res) => {
   try {
     res.json({
       user: {
         id: req.user._id,
         username: req.user.username,
         email: req.user.email,
-        online: req.user.online
-      }
+        avatar: req.user.avatar,
+        online: req.user.online,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// Get all users (for contact list)
-UserRouter.get('/users', auth, async (req, res) => {
+// ─── Get all users (contact list) ─────────────────────────────────────────────
+UserRouter.get("/users", auth, async (req, res) => {
   try {
-    const users = await User.find({ _id: { $ne: req.userId } })
-      .select('id username email online')
+    const users = await User.find({ _id: { $ne: req.user._id } })
+      .select("id username email avatar online")
       .lean();
 
     res.json({ users });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-export default UserRouter
+export default UserRouter;

@@ -32,15 +32,30 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+// UserSchema.pre('save', async function(next) {
+//   if (!this.isModified('password')) return next();
   
+//   try {
+//     const hashedPassword = await bcrypt.hash(this.password, 10);
+//     this.password = hashedPassword;
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+
+UserSchema.pre('save', async function () {
+  // If the password hasn't been modified, just return early to stop execution
+  if (!this.isModified('password')) {
+    return; 
+  }
+
   try {
-    const hashedPassword = await bcrypt.hash(this.password, 10);
-    this.password = hashedPassword;
-    next();
+    // Hash the password cleanly using await
+    this.password = await bcrypt.hash(this.password, 10);
   } catch (error) {
-    next(error);
+    // If something goes wrong with bcrypt, throw the error to pass it to your route's catch block
+    throw error; 
   }
 });
 
