@@ -1,0 +1,20 @@
+import axios from "axios";
+
+const getFriends = async () => {
+  try {
+    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/friend`, {
+      withCredentials: true,
+    });
+    return res.data.Friends; 
+  } catch (error: any) {
+    if (error.response) {
+      console.log("Server Error Status:", error.response.status);
+      console.log("Server Error Data:", error.response.data);
+    } else {
+      console.log("Network Connection Error:", error.message);
+    }
+    return [];
+  }
+};
+
+export default getFriends;
