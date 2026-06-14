@@ -1,7 +1,6 @@
 "use client";
 
 import axios from "axios";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -10,10 +9,47 @@ import toast, { Toaster } from "react-hot-toast";
 import {
   FaArrowRight,
   FaEnvelope,
+  FaEye,
+  FaEyeSlash,
   FaImage,
   FaLock,
   FaUser,
 } from "react-icons/fa6";
+
+// ✅ Moved OUTSIDE Signup so it's not re-created on every render
+interface StyledInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  icon: React.ComponentType<{ className?: string }>;
+  error?: string;
+  rightElement?: React.ReactNode;
+}
+
+const StyledInput = React.forwardRef<HTMLInputElement, StyledInputProps>(
+  ({ icon: Icon, error, rightElement, ...props }, ref) => {
+    return (
+      <div className="space-y-1">
+        <div className="relative flex items-center">
+          <div className="absolute left-4 text-slate-400">
+            <Icon className="text-lg" />
+          </div>
+          <input
+            ref={ref}
+            {...props}
+            className={`w-full pl-12 pr-12 py-3 rounded-xl bg-slate-50 border transition-all outline-none text-slate-700 placeholder:text-slate-400 ${
+              error
+                ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                : "border-slate-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
+            }`}
+          />
+          {rightElement && (
+            <div className="absolute right-4 text-slate-400">{rightElement}</div>
+          )}
+        </div>
+        {error && <p className="text-xs text-red-500 pl-2">{error}</p>}
+      </div>
+    );
+  }
+);
+StyledInput.displayName = "StyledInput";
 
 const Signup = () => {
   const router = useRouter();
@@ -24,20 +60,26 @@ const Signup = () => {
     formState: { errors, isSubmitting },
   } = useForm();
 
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const password = watch("password");
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: any) => {
     const formData = new FormData();
     formData.append("username", data.username);
     formData.append("email", data.email);
     formData.append("password", data.password);
-    formData.append("avatar", avatarFile);
-    console.log("befoter try catch")
+    // ✅ Only append avatar if user selected one
+    if (avatarFile) {
+      formData.append("avatar", avatarFile);
+    }
+
     try {
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_URL}/register`,
+        `${process.env.NEXT_PUBLIC_API_URL}/register`,
         formData
       );
 
@@ -45,54 +87,20 @@ const Signup = () => {
         toast.success(response.data.message);
         router.push("/login");
       }
-    } catch (error) {
-      console.error("some error occure while sign up", error)
-      const { message  } = error.response || "some error occurred"
+    } catch (error: any) {
+      console.error("Error during sign up:", error);
+      // ✅ Fixed: correctly read message from error.response.data
+      const message = error.response?.data?.message || "Some error occurred";
+
       if (error.response) {
-        if (error.response.status === 400) {
-          toast.error(message ?? "some error occurred");
+        if ([400, 409, 500].includes(error.response.status)) {
+          toast.error(message);
         }
-        if (error.response.status === 409) {
-          toast.error(message ?? "some error occurred");
-        }
-        if (error.response.status === 500) {
-          toast.error(message ?? "some error occurred");
-        }
+      } else {
+        toast.error("Network error. Please try again.");
       }
     }
   };
-
-
-  // Create the missing StyledInput component
-interface StyledInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  icon: React.ComponentType<{ className?: string }>;
-  error?: string;
-}
-
-const StyledInput = React.forwardRef<HTMLInputElement, StyledInputProps>(
-  ({ icon: Icon, error, ...props }, ref) => {
-    return (
-      <div className="space-y-1">
-        <div className="relative flex items-center">
-          <div className="absolute left-4 text-slate-400">
-            <Icon className="text-lg" />
-          </div>
-          <input
-            ref={ref}
-            {...props}
-            className={`w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 border transition-all outline-none text-slate-700 placeholder:text-slate-400 ${
-              error 
-                ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100" 
-                : "border-slate-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
-            }`}
-          />
-        </div>
-        {error && <p className="text-xs text-red-500 pl-2">{error}</p>}
-      </div>
-    );
-  }
-);
-StyledInput.displayName = "StyledInput";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-emerald-50 flex items-center justify-center p-4">
@@ -110,8 +118,14 @@ StyledInput.displayName = "StyledInput";
 
       {/* Floating pastel blobs */}
       <div className="absolute top-[-10%] left-[-10%] w-80 h-80 bg-pink-200/40 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-200/40 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-      <div className="absolute top-[40%] right-[20%] w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "2s" }} />
+      <div
+        className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-200/40 rounded-full blur-3xl animate-pulse"
+        style={{ animationDelay: "1s" }}
+      />
+      <div
+        className="absolute top-[40%] right-[20%] w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl animate-pulse"
+        style={{ animationDelay: "2s" }}
+      />
 
       {/* Glass card */}
       <div className="relative w-full max-w-md bg-white/80 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-pink-100/40 border border-white/60 p-8 sm:p-10">
@@ -195,9 +209,23 @@ StyledInput.displayName = "StyledInput";
           {/* Password */}
           <StyledInput
             icon={FaLock}
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Password"
             error={errors.password?.message as string}
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="focus:outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <FaEyeSlash className="text-lg" />
+                ) : (
+                  <FaEye className="text-lg" />
+                )}
+              </button>
+            }
             {...register("password", {
               required: "Password is required",
               minLength: {
@@ -210,9 +238,23 @@ StyledInput.displayName = "StyledInput";
           {/* Confirm Password */}
           <StyledInput
             icon={FaLock}
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             placeholder="Confirm password"
             error={errors.confirmPassword?.message as string}
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="focus:outline-none"
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? (
+                  <FaEyeSlash className="text-lg" />
+                ) : (
+                  <FaEye className="text-lg" />
+                )}
+              </button>
+            }
             {...register("confirmPassword", {
               required: "Please confirm your password",
               validate: (value) =>
@@ -240,11 +282,11 @@ StyledInput.displayName = "StyledInput";
           <p className="text-center text-sm text-slate-500 pt-2">
             Already have an account?{" "}
             <Link
-            href="/login"
-            className="font-medium text-pink-500 hover:text-pink-600 transition-colors"
-          >
-            Sign in
-          </Link>
+              href="/login"
+              className="font-medium text-pink-500 hover:text-pink-600 transition-colors"
+            >
+              Sign in
+            </Link>
           </p>
         </form>
 
@@ -255,6 +297,6 @@ StyledInput.displayName = "StyledInput";
       </div>
     </div>
   );
-}
+};
 
 export default Signup;

@@ -8,12 +8,13 @@ import { set, useForm } from "react-hook-form";
 import toast, { Toaster } from "react-hot-toast";
 import { FaEnvelope, FaLock, FaArrowRight, FaFacebook, FaGoogle } from "react-icons/fa";
 import { useDispatch } from "react-redux";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 
 const LoginForm = () => {
   const dispatch = useDispatch();
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const {
@@ -24,7 +25,7 @@ const LoginForm = () => {
 
   const handleLogin = async (data) => {
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_URL}/login`, data, {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/login`, data, {
         withCredentials: true,
       });
 
@@ -109,6 +110,14 @@ const LoginForm = () => {
                     {...register("password", { required: "Password is required" })}
                     className="w-full pl-11 pr-4 py-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/60 focus:border-indigo-300 transition"
                   />
+                  <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors"
+                        style={{ color: themeColors.neutral, '--tw-text-hover-color': themeColors.primary }}
+                      >
+                        {showPassword ? <EyeOff /> : <Eye />}
+                      </button>
                 </div>
                 {errors.password && (
                   <p className="mt-1 ml-2 text-xs text-rose-500">
@@ -187,9 +196,9 @@ const LoginForm = () => {
           </div>
         </div>
 
-        <p className="mt-5 text-center text-xs text-slate-400">
+        {/* <p className="mt-5 text-center text-xs text-slate-400">
           Made with 🌸 for cozy conversations
-        </p>
+        </p> */}
       </div>
     </div>
   );

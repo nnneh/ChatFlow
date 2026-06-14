@@ -8,6 +8,12 @@ import friendRequestRouter from './routes/addFriendRoute.js'
 import groupRouter from './routes/groupRoutes.js'
 import http from "http";
 import { Server } from "socket.io";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+
+const filename = fileURLToPath(import.meta.url);
+const dirname = path.dirname(filename);
 
 const app = express();
 dotenv.config()
@@ -26,6 +32,8 @@ connect()
 app.use(cors())
 app.use(express.json()) 
 
+// Add this line to serve static files (uploaded images)
+app.use('/uploads', express.static(path.join(dirname, 'uploads')));
 
 app.use(userRouter)
 app.use(chatRouter)
