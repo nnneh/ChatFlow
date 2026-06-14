@@ -1,10 +1,19 @@
+import express from "express";
 import mongoose from "mongoose";
-import { GroupChat } from "../model/groupChatModel.js";
-import { Message } from "../model/messageModel.js";
-import { User } from "../model/userModel.js";
+import verifyLogin from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/uploadFileMiddleware.js";
+import { GroupChat } from "../models/groupChatModel.js";
+import { Message } from "../models/messageModel.js";
+import User from "../models/userModel.js";
 import { uploadOnCloudinaryMutliple } from "../utils/cloudinary.js";
 
-const createGroup = async (req, res) => {
+const groupRouter = express.Router();
+
+// Apply auth middleware to all group routes
+groupRouter.use(verifyLogin);
+
+// Create Group
+groupRouter.post("/makeGroup", async (req, res) => {
   try {
     let { name, members } = req.body;
     if (!name || !members) {
@@ -29,7 +38,7 @@ const createGroup = async (req, res) => {
       groupAdmin: req.userID,
     });
 
-    //to send data through socket
+    // Send data through socket
     const populatedGroup = await GroupChat.findById(newGroup._id)
       .populate({
         path: "participants",
@@ -51,14 +60,12 @@ const createGroup = async (req, res) => {
 
     const io = req.app.get("io");
     const onlineUser = global.onlineUser;
-    // console.log(onlineUser);
+
     members.forEach((memberId) => {
       if (memberId !== req.userID) {
         const socketId = onlineUser[memberId];
         if (socketId) {
           io.emit("new-group-creation", groupData);
-          // console.log(groupData);
-          // console.log("Emitting new group creation");
         }
       }
     });
@@ -70,13 +77,13 @@ const createGroup = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const deleteGroup = async (req, res) => {
+// Delete Group
+groupRouter.delete("/deleteGroup/:id", async (req, res) => {
   try {
     const groupID = req.params.id;
 
-    //check for valid mongodb _id
     if (!mongoose.isValidObjectId(groupID)) {
       return res.status(400).json({ message: "Invalid Group ID" });
     }
@@ -87,7 +94,6 @@ const deleteGroup = async (req, res) => {
       return res.status(404).json({ message: "Group Not Found" });
     }
 
-    //if not admin
     if (group.groupAdmin.toString() !== req.userID) {
       return res
         .status(401)
@@ -103,7 +109,6 @@ const deleteGroup = async (req, res) => {
     await group.deleteOne();
 
     const io = req.app.get("io");
-
     io.emit("group-deleted", groupID);
 
     return res
@@ -113,9 +118,10 @@ const deleteGroup = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const addMember = async (req, res) => {
+// Add Member
+groupRouter.put("/addMember", async (req, res) => {
   try {
     const { groupID, memberID } = req.body;
 
@@ -123,7 +129,6 @@ const addMember = async (req, res) => {
       return res.status(400).json({ message: "All Field Are Required" });
     }
 
-    //check for valid mongodb _id
     if (!mongoose.isValidObjectId(groupID)) {
       return res.status(400).json({ message: "Invalid Group ID || Member ID" });
     }
@@ -139,7 +144,7 @@ const addMember = async (req, res) => {
 
     if (memberID.some((id) => group.participants.includes(id))) {
       return res.status(400).json({ message: "Member Already In The Group" });
-    };
+    }
 
     const newMembersInfo = await User.find({ _id: { $in: memberID } }).select(
       "-password -refreshToken"
@@ -150,16 +155,13 @@ const addMember = async (req, res) => {
     }
 
     const userNames = newMembersInfo.map((user) => user.username);
-
     const oldMembers = group.participants;
-
     const newMembers = memberID.filter((id) => !oldMembers.includes(id));
 
     group.participants = [...oldMembers, ...newMembers];
-
     await group.save();
 
-    //to send data through socket
+    // Send data through socket
     const populatedGroup = await GroupChat.findById(groupID)
       .populate({
         path: "participants",
@@ -178,11 +180,9 @@ const addMember = async (req, res) => {
       group: { ...populatedGroup, avatar },
       lastMessage: { content: "Start Chat In New Group" },
     };
-    console.log(populatedGroup._id.toString());
 
     const io = req.app.get("io");
     io.emit("member-added", groupData);
-
 
     return res
       .status(200)
@@ -191,9 +191,10 @@ const addMember = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const removeMember = async (req, res) => {
+// Remove Member
+groupRouter.post("/removeMember", async (req, res) => {
   try {
     const { groupID, memberID } = req.body;
 
@@ -201,7 +202,6 @@ const removeMember = async (req, res) => {
       return res.status(400).json({ message: "All Field Are Required" });
     }
 
-    //check for valid mongodb _id
     if (
       !mongoose.isValidObjectId(groupID) ||
       !mongoose.isValidObjectId(memberID)
@@ -214,7 +214,7 @@ const removeMember = async (req, res) => {
     if (!group) {
       return res.status(404).json({ message: "Group Not Found" });
     }
-    //check for admin id so that admin cannot be removed by other member
+
     if (group.groupAdmin.toString() === memberID) {
       return res.status(401).json({ message: "Admin Cannot Be Removed" });
     }
@@ -229,7 +229,7 @@ const removeMember = async (req, res) => {
     await group.updateOne({ $pull: { participants: memberID } });
 
     const io = req.app.get("io");
-    io.emit("member-removed", {groupID, memberID});
+    io.emit("member-removed", { groupID, memberID });
 
     return res
       .status(200)
@@ -238,9 +238,10 @@ const removeMember = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const leaveGroup = async (req, res) => {
+// Leave Group
+groupRouter.delete("/leaveGroup/:id", async (req, res) => {
   try {
     const groupID = req.params.id;
 
@@ -271,9 +272,10 @@ const leaveGroup = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const myGroups = async (req, res) => {
+// Get My Groups
+groupRouter.get("/myGroups", async (req, res) => {
   try {
     const groups = await GroupChat.find({ participants: req.userID });
 
@@ -293,12 +295,12 @@ const myGroups = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const myMessages = async (req, res) => {
+// Get Group Messages
+groupRouter.get("/myMessages/:id", async (req, res) => {
   try {
     const groupId = req.params.id;
-
     const group = await GroupChat.findById(groupId);
 
     if (!group) {
@@ -337,13 +339,13 @@ const myMessages = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-const sendMessage = async (req, res) => {
+// Send Group Message
+groupRouter.post("/sendMessage/:id", upload.array("file"), async (req, res) => {
   try {
     const chatId = req.params.id;
-    console.log(req.files);
-    const filesPath = req.files?.map((file) => file.path);
+    const filesPath = req.files?.map((file) => file.path) || [];
 
     if (!mongoose.isValidObjectId(chatId)) {
       return res.status(400).json({ message: "Invalid Group ID" });
@@ -358,6 +360,7 @@ const sendMessage = async (req, res) => {
     if (!group.participants.includes(req.userID)) {
       return res.status(401).json({ message: "You Are Not In The Group" });
     }
+    
     let uploadedFileURL;
     if (filesPath.length !== 0) {
       const { uploadedFile } = await uploadOnCloudinaryMutliple(filesPath);
@@ -395,15 +398,6 @@ const sendMessage = async (req, res) => {
     console.error(error);
     return res.status(500).json({ message: "Internal Failure" });
   }
-};
+});
 
-export {
-  createGroup,
-  deleteGroup,
-  addMember,
-  removeMember,
-  leaveGroup,
-  myGroups,
-  myMessages,
-  sendMessage,
-};
+export default groupRouter;

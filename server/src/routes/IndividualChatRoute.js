@@ -2,10 +2,10 @@ import express from "express";
 import mongoose from "mongoose";
 import verifyLogin from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadFileMiddleware.js";
-import { Message } from "../model/messageModel.js";
-import { IndividualChat } from "../model/individualChatModel.js";
-import { User } from "../model/userModel.js";
-import { AddFriend } from "../model/addFriendModel.js";
+import { Message } from "../models/messageModel.js";
+import { IndividualChat } from "../models/individualChatModel.js";
+import User from "../models/userModel.js";
+import { AddFriend } from "../models/addFriendModel.js";
 
 const chatRouter = express.Router();
 
