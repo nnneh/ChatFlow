@@ -1,28 +1,21 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
-const sendFriendRequest = async (_id) => {
+// ✅ Fixed: use the same env var as the rest of the app
+const sendFriendRequest = async (usernameOrId: string): Promise<string> => {
   try {
     const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/request/sendRequest/${_id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/request/sendRequest/${usernameOrId}`,
       {},
       { withCredentials: true }
     );
-
-    if (res.data) {
-      return res.data.message;
+    return res.data.message;
+  } catch (error) {
+    const err = error as AxiosError<{ message?: string }>;
+    if (err.response) {
+      throw new Error(err.response.data?.message || "An error occurred on the server.");
     }
-  } catch (error: any) {
-    // Check if error response exists first to prevent crashes
-    if (error.response) {
-      if (error.response.status === 409) {
-        return error.response.data.message;
-      }
-      return error.response.data.message || "An error occurred on the server.";
-    }
-    
-    console.error(error);
-    return "Network error: check your connection.";
+    throw new Error("Network error: check your connection.");
   }
-}
+};
 
 export default sendFriendRequest;

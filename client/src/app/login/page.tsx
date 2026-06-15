@@ -30,16 +30,22 @@ const LoginForm = () => {
       });
 
       if (response.status === 200) {
-        const { message, user } = response.data;
+        const { message, user, accessToken, refreshToken } = response.data;
+
+        // --- ADDED FOR COOKIE DEBUGGING ---
+        // This evaluates if the server returned tokens directly in the body response
+        console.log("Setting cookies:", { 
+          accessToken: !!accessToken, 
+          refreshToken: !!refreshToken 
+        });
+        // ----------------------------------
+
         dispatch(setUser(user));
         toast.success(message + " to " + user.username);
         router.push("/chat");
       }
     } catch (error) {
-      // Safely check if error.response and data exist using optional chaining (?.)
-      // Falls back to a helpful string if the server is completely offline
       const errorMessage = error.response?.data?.message || "Could not connect to the server. Please try again.";
-      
       toast.error(errorMessage);
       console.error("Login error context:", error);
     }

@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema({
        avatar: {
         type: String,  
       },
-      isOnline: {
+      Online: {
         type: Boolean,
         default: false
       },

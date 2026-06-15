@@ -10,7 +10,7 @@ import {
   REGISTER,
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import { userSlice } from "./features/userSlice";
+import { userSlice } from "./features/userSlice";             // the slice
 import friendRequestDetailsSlice from "./features/friendRequestSlice";
 import friendListSlice from "./features/friendListSlice";
 import groupListSlice from "./features/groupSlice";
@@ -21,11 +21,12 @@ const persistConfig = {
 };
 
 const rootReducer = combineReducers({
-  userInfo: userSlice,
+  user: userSlice.reducer,          // ✅ Fixed: use .reducer not the slice object
   requestDetails: friendRequestDetailsSlice,
   friendList: friendListSlice,
   groupList: groupListSlice,
 });
+
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
@@ -39,3 +40,7 @@ export const store = configureStore({
 });
 
 export const persistor = persistStore(store);
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+export type RootState = ReturnType<typeof rootReducer>;
+export type AppDispatch = typeof store.dispatch;
