@@ -1,33 +1,41 @@
-import { combineReducers, configureStore } from '@reduxjs/toolkit'
-import userSlice from "./features/userSlice";
-import { persistStore, persistReducer,  FLUSH,
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import {
+  persistStore,
+  persistReducer,
+  PERSIST,
+  FLUSH,
   REHYDRATE,
   PAUSE,
-  PERSIST,
   PURGE,
-  REGISTER } from "redux-persist";
+  REGISTER,
+} from "redux-persist";
 import storage from "redux-persist/lib/storage";
-// import logger from 'redux-logger';
-// import  notificationSlice  from './features/notification/notificationSlice';
+import { userSlice } from "./features/userSlice";
+import friendRequestDetailsSlice from "./features/friendRequestSlice";
+import friendListSlice from "./features/friendListSlice";
+import groupListSlice from "./features/groupSlice";
+
 const persistConfig = {
-    key: "root",
-    storage,
-    blacklist: ['notification']
-  };
-const rootReducer = combineReducers({ 
-    user: userSlice,
-    // notification: notificationSlice
-})
-  
+  key: "root",
+  storage,
+};
+
+const rootReducer = combineReducers({
+  userInfo: userSlice,
+  requestDetails: friendRequestDetailsSlice,
+  friendList: friendListSlice,
+  groupList: groupListSlice,
+});
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware:(getDefaultMiddleware)=> getDefaultMiddleware({
-    serializableCheck: {
-      ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-    },
-  })
-})
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
+});
 
 export const persistor = persistStore(store);

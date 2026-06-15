@@ -29,7 +29,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      {/* 1. All visible content and providers must live inside the body */}
+      {/* All visible content and providers must live inside the body */}
       <body className="min-h-full flex flex-col">
         <ReduxProvider>
           {children}

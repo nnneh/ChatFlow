@@ -12,7 +12,7 @@ const initialState: FriendRequestState = {
   friendRequestDetails: [],
 };
 
-const friendRequestDetailsSlice = createSlice({
+export const friendRequestDetailsSlice = createSlice({
   name: "friendRequestDetails",
   initialState,
   reducers: {

@@ -1,5 +1,5 @@
 "use client";
-import { loadUserInfo } from "@/lib/redux/features/userSlice";
+import { setUser } from "@/lib/redux/features/userSlice";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,7 +31,7 @@ const LoginForm = () => {
 
       if (response.status === 200) {
         const { message, user } = response.data;
-        dispatch(loadUserInfo(user));
+        dispatch(setUser(user));
         toast.success(message + " to " + user.username);
         router.push("/chat");
       }
