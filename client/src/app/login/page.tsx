@@ -1,5 +1,6 @@
 "use client";
-import { setUser } from "@/lib/redux/features/userSlice";
+// import { setUser } from "@/lib/redux/features/userSlice";
+import { loadUserInfo } from "@/lib/redux/features/userSlice";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,9 +41,9 @@ const LoginForm = () => {
         });
         // ----------------------------------
 
-        dispatch(setUser(user));
+        dispatch(loadUserInfo(user));
         toast.success(message + " to " + user.username);
-        router.push("/chat");
+        router.push("chatflow/chat");
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Could not connect to the server. Please try again.";

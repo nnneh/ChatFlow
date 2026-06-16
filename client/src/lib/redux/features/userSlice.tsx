@@ -1,37 +1,28 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-interface User {
-  id: string | number;
-  name: string;
-  email?: string;
+// 1. Define an interface for your slice's state
+interface UserInfoState {
+    userInfo: Record<string, any>; // Replace 'any' with a specific user object interface if you have one
 }
 
-interface UserState {
-  currentUser: User | null;
-  isAuthenticated: boolean;
-}
-
-const initialState: UserState = {
-  currentUser: null,
-  isAuthenticated: false,
+// 2. Apply the interface to your initial state
+const initialState: UserInfoState = {
+    userInfo: {},    
 };
 
-export const userSlice = createSlice({
-  name: "user",
-  initialState,
-  reducers: {
-    setUser: (state, action: PayloadAction<User>) => {
-      state.currentUser = action.payload;
-      state.isAuthenticated = true;
-    },
-    
-    logoutUser: (state) => {
-      state.currentUser = null;
-      state.isAuthenticated = false;
-    },
-  },
+const userSlice = createSlice({
+    name: "UserInfo",
+    initialState,
+    reducers: {
+        // Redux Toolkit now automatically knows the type of 'state' based on initialState
+        loadUserInfo: (state, action: PayloadAction<Record<string, any>>) => {
+            state.userInfo = action.payload;
+        }, 
+        removeUserInfo: (state) => {
+            state.userInfo = {};
+        }
+    }
 });
 
-export const { setUser, logoutUser } = userSlice.actions;
-
+export const { loadUserInfo, removeUserInfo } = userSlice.actions;
 export default userSlice.reducer;

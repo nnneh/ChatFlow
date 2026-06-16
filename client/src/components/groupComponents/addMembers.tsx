@@ -1,13 +1,13 @@
 "use client";
+
 import addGroupMember from "@/app/api/addGroupMember";
-import getGroups from "@/app/api/getGroups";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { groupMemberCountUpdate, setGroupList } from "@/lib/redux/features/groupListSlice";
+import { groupMemberCountUpdate } from "@/lib/redux/features/groupSlice";
 import { Check, CircleMinus, Plus } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -15,31 +15,66 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 
-const AddMembers = ({ chatId }) => {
-  const { friendList } = useSelector((state) => state.friendList);
+// Blueprint for Friend data structure
+interface Friend {
+  _id: string;
+  avatar: string;
+  username: string;
+}
+
+// Map the shape of your Redux slice
+interface RootState {
+  friendList: {
+    friendList: Array<{ friend: Friend }>;
+  };
+}
+
+interface AddMembersProps {
+  chatId: string;
+}
+
+const AddMembers = ({ chatId }: AddMembersProps) => {
+  const { friendList } = useSelector((state: RootState) => state.friendList);
   const dispatch = useDispatch();
 
   const { handleSubmit } = useForm();
-  const [selectedFriends, setSelectedFriends] = useState([]);
+  
+  // State typed to specifically accept an array of Friend objects
+  const [selectedFriends, setSelectedFriends] = useState<Friend[]>([]);
 
-  const addFriend = (friend) => {
-    if (!selectedFriends.some((f) => f._id === friend._id)) {
+  // Derived state: Use a Set of IDs for O(1) performance lookups during rendering
+  const selectedFriendIds = new Set(selectedFriends.map((f) => f._id));
+
+  const addFriend = (friend: Friend) => {
+    if (!selectedFriendIds.has(friend._id)) {
       setSelectedFriends((prev) => [...prev, friend]);
     }
   };
 
-  const onSubmit = async (data) => {
+  const removeFriend = (friendId: string) => {
+    setSelectedFriends((prev) => prev.filter((f) => f._id !== friendId));
+  };
+
+  const onSubmit = async () => {
     const groupID = chatId;
-    const memberID = selectedFriends?.map((f) => f?._id);
-    const members = selectedFriends
+    // Map objects down to an array of pure ID strings to match your API signature
+    const memberID: string[] = selectedFriends.map((f) => f._id);
+
+    if (memberID.length === 0) {
+      toast.error("Please pick at least one friend to add!");
+      return;
+    }
 
     addGroupMember(groupID, memberID)
       .then((res) => {
-        toast.success(res)
-        dispatch(groupMemberCountUpdate({groupID, memberID, isAdd: true}))
-
+        toast.success(typeof res === "string" ? res : "Members added successfully!");
+        dispatch(groupMemberCountUpdate({ groupID, memberID, isAdd: true }));
+        setSelectedFriends([]); // Flush selections out on success
       })
-      .catch((err) => toast.error(err));
+      .catch((err: unknown) => {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        toast.error(errorMsg || "Failed to add member");
+      });
   };
 
   return (
@@ -47,9 +82,7 @@ const AddMembers = ({ chatId }) => {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={
-            "text-white bg-purple-500 border-none hover:bg-purple-600 transition-all duration-300"
-          }
+          className="text-white bg-purple-500 border-none hover:bg-purple-600 transition-all duration-300"
         >
           <Plus size={30} />
         </Button>
@@ -61,7 +94,7 @@ const AddMembers = ({ chatId }) => {
           </div>
           <form onSubmit={handleSubmit(onSubmit)} className="w-full">
             <div className="w-full max-h-64 overflow-y-auto">
-              {friendList.length > 0
+              {friendList && friendList.length > 0
                 ? friendList.map(({ friend }) => (
                     <div
                       key={friend._id}
@@ -70,33 +103,32 @@ const AddMembers = ({ chatId }) => {
                       <div className="flex items-center gap-3">
                         <div>
                           <Image
-                            src={friend.avatar}
+                            src={friend.avatar || "/default-avatar.png"}
                             height={50}
                             width={50}
                             alt="Profile_image"
-                            className="rounded-full h-12 w-12"
+                            className="rounded-full h-12 w-12 object-cover"
                           />
                         </div>
                         <div>{friend.username}</div>
                       </div>
                       <div className="flex gap-2">
-                        {selectedFriends.map((f) => f._id).includes(friend._id) ? (
+                        {selectedFriendIds.has(friend._id) ? (
                           <>
                             <Check size={20} className="text-purple-500" />
-                            <CircleMinus
-                              size={20}
-                              className="text-red-500"
-                              onClick={() =>
-                                setSelectedFriends((prev) =>
-                                  prev.filter((f) => f._id !== friend._id)
-                                )
-                              }
-                            />
+                            <button
+                              type="button"
+                              onClick={() => removeFriend(friend._id)}
+                              className="focus:outline-none"
+                            >
+                              <CircleMinus size={20} className="text-red-500" />
+                            </button>
                           </>
                         ) : (
                           <button
                             type="button"
                             onClick={() => addFriend(friend)}
+                            className="focus:outline-none"
                           >
                             <Plus size={20} />
                           </button>
@@ -108,7 +140,8 @@ const AddMembers = ({ chatId }) => {
             </div>
             <Button
               type="submit"
-              className="mt-4 bg-purple-500 hover:bg-purple-600 transition-all duration-200"
+              className="mt-4 w-full bg-purple-500 hover:bg-purple-600 transition-all duration-200"
+              disabled={selectedFriends.length === 0}
             >
               Add Member
             </Button>

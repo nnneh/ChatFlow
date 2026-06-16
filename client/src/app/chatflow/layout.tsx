@@ -1,38 +1,40 @@
 "use client";
-import NavBar from "@/components/NavBar";
 import socket from "@/lib/socket";
-import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
 
-const layout = ({ children }) => {
-  const router = useRouter();
-  const user = useSelector((state) => state.userInfo.userInfo);
+interface RootLayoutProps {
+  children: React.ReactNode;
+}
+
+const Layout = ({ children }: RootLayoutProps) => {
+  const user = useSelector((state: any) => state.userInfo?.userInfo || null);
 
   useEffect(() => {
-    if (user && user._id) {
+    if (!user || !user._id) return;
+
+    if (socket.connected) {
       socket.emit("login", user._id);
     }
-    // Handle socket reconnection
-    socket.on("connect", () => {
+
+    const handleConnect = () => {
       if (user && user._id) {
         socket.emit("login", user._id);
       }
-    });
-
-    // Cleanup when component unmounts
-    return () => {
-      socket.off("connect");
     };
-  }, [user, router]);
+
+    socket.on("connect", handleConnect);
+
+    return () => {
+      socket.off("connect", handleConnect);
+    };
+  }, [user]);
+
   return (
-    <div className="w-full h-screen flex">
-      <div className="fixed top-0 left-0 h-screen">
-        <NavBar />
-      </div>
-      <div className="ml-20">{children}</div>
+    <div className="w-full min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-emerald-50">
+      {children}
     </div>
   );
 };
 
-export default layout;
+export default Layout;

@@ -1,4 +1,5 @@
 "use client";
+
 import createGroup from "@/app/api/createGroup";
 import getGroups from "@/app/api/getGroups";
 import { Button } from "@/components/ui/button";
@@ -8,38 +9,64 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { setGroupList } from "@/lib/redux/features/groupListSlice";
+import { setGroupList } from "@/lib/redux/features/groupSlice";
 import { Check, CircleMinus, Plus } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 
-const GroupCreationPopOver = () => {
-  const { friendList } = useSelector((state) => state.friendList);
+// --- Types & Interfaces ---
+interface FriendDetails {
+  _id: string;
+  username: string;
+  avatar: string;
+}
 
-  const { register, handleSubmit } = useForm();
-  const [selectedFriends, setSelectedFriends] = useState([]);
+interface FriendListItem {
+  friend: FriendDetails;
+}
+
+// Replace this with your actual Redux RootState type if available
+interface RootState {
+  friendList: {
+    friendList: FriendListItem[];
+  };
+}
+
+interface GroupFormData {
+  groupName: string;
+}
+
+const GroupCreationPopOver = () => {
+  const { friendList } = useSelector((state: RootState) => state.friendList);
   const dispatch = useDispatch();
 
-  const addFriend = (friend) => {
-    if (!selectedFriends.some((f) => f._id === friend._id)) {
+  const { register, handleSubmit } = useForm<GroupFormData>();
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+
+  const addFriend = (friend: FriendDetails) => {
+    // Since selectedFriends is an array of IDs, we just check for the ID directly
+    if (!selectedFriends.includes(friend._id)) {
       setSelectedFriends((prev) => [...prev, friend._id]);
     }
   };
 
-
-  const onSubmit = (data) => {
+  const onSubmit: SubmitHandler<GroupFormData> = (data) => {
     const name = data.groupName;
     const members = selectedFriends;
 
     createGroup(name, members)
-    .then((res) => {
-      toast.success(res)
-      getGroups().then((res) => dispatch(setGroupList(res)));
-    })
-    .catch((err) => toast.error(err));
+      .then((res: string) => {
+        toast.success(res);
+        // Explicitly casting res from getGroups if your API slice requires specific actions
+        getGroups().then((groupRes) => dispatch(setGroupList(groupRes)));
+      })
+      .catch((err: any) => {
+        const errorMessage = err?.response?.data?.message || err?.message || "An error occurred";
+        toast.error(errorMessage);
+      });
   };
 
   return (
@@ -47,9 +74,7 @@ const GroupCreationPopOver = () => {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={
-            "bg-gray-900 text-white border-none hover:bg-gray-900 hover:text-purple-500 transition-all duration-200"
-          }
+          className="bg-gray-900 text-white border-none hover:bg-gray-900 hover:text-purple-500 transition-all duration-200"
         >
           <Plus size={30} />
         </Button>
@@ -89,7 +114,7 @@ const GroupCreationPopOver = () => {
                             height={50}
                             width={50}
                             alt="Profile_image"
-                            className="rounded-full h-12 w-12"
+                            className="rounded-full h-12 w-12 object-cover"
                           />
                         </div>
                         <div>{friend.username}</div>
@@ -100,10 +125,10 @@ const GroupCreationPopOver = () => {
                             <Check size={20} className="text-purple-500" />
                             <CircleMinus
                               size={20}
-                              className="text-red-500"
+                              className="text-red-500 cursor-pointer"
                               onClick={() =>
                                 setSelectedFriends((prev) =>
-                                  prev.filter((f) => f !== friend._id)
+                                  prev.filter((id) => id !== friend._id)
                                 )
                               }
                             />
@@ -112,6 +137,7 @@ const GroupCreationPopOver = () => {
                           <button
                             type="button"
                             onClick={() => addFriend(friend)}
+                            className="focus:outline-none"
                           >
                             <Plus size={20} />
                           </button>

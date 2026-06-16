@@ -1,8 +1,17 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
-const leaveGroup = async (groupID) => {
+interface ApiErrorResponse {
+  message: string;
+}
+
+interface LeaveGroupResponse {
+  success?: boolean;
+  message?: string;
+}
+
+const leaveGroup = async (groupID: string): Promise<string | undefined> => {
   try {
-    const { data } = await axios.delete(
+    const { data } = await axios.delete<LeaveGroupResponse>(
       `${process.env.NEXT_PUBLIC_API_URL}/group/leaveGroup/${groupID}`,
       { withCredentials: true }
     );
@@ -11,10 +20,14 @@ const leaveGroup = async (groupID) => {
       return "Left SuccessFully";
     }
   } catch (error) {
-    if (error.status) {
-      console.log(error.response.data.message);
-      return error.response.data.message;
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+
+    if (axiosError.response) {
+      console.log(axiosError.response.data.message);
+      return axiosError.response.data.message;
     }
+    console.error("An unexpected error occurred:", error);
+    return "An unexpected error occurred while leaving the group";
   }
 };
 
