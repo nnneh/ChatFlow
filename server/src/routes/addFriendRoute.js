@@ -208,4 +208,31 @@ friendRequestRouter.get("/allrequest", async (req, res) => {
   }
 });
 
+// 5. Get All Sent Friend Requests
+friendRequestRouter.get("/sentrequests", async (req, res) => {
+  try {
+    const currentUserId = getSenderId(req);
+
+    const requests = await AddFriendModel.find({
+      sender: currentUserId,
+      status: "pending",
+    }).populate({ path: "receiver", select: "-password -refreshToken" });
+
+    const formattedData = requests.map((f) => ({
+      requestId: f._id,
+      receiver: {
+        _id: f.receiver._id,
+        username: f.receiver.username,
+        avatar: f.receiver.avatar,
+      },
+      createdAt: f.createdAt,
+    }));
+
+    return res.status(200).json({ message: "Sent Requests", request: formattedData });
+  } catch (error) {
+    console.error("Error in sentrequests:", error);
+    return res.status(500).json({ message: "Internal Server Failure" });
+  }
+});
+
 export default friendRequestRouter;

@@ -5,7 +5,9 @@ const getFriends = async () => {
     const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/friend`, {
       withCredentials: true,
     });
-    return res.data.Friends; 
+
+    console.log("Full response:", res.data);
+    return res.data.Friends ?? res.data.friends ?? res.data ?? [];
   } catch (error: any) {
     if (error.response) {
       console.log("Server Error Status:", error.response.status);
@@ -16,5 +18,3 @@ const getFriends = async () => {
     return [];
   }
 };
-
-export default getFriends;
