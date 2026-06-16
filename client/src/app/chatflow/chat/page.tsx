@@ -5,13 +5,27 @@ import FriendListHeader from "@/components/friendComponents/friendListHeader";
 import { ArrowLeftIcon } from "lucide-react";
 import React, { useState } from "react";
 
+// Matches the interface defined in your FriendList component
+interface Friend {
+  _id: string;
+  username: string;
+  avatar?: string;
+}
+
 const Chat = () => {
-  const [selectedFriend, setSelectedFriend] = useState<any>(null);
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [searchFriend, setSearchFriend] = useState("");
   const [chatId, setChatId] = useState("");
   const [openChat, setOpenChat] = useState("");
 
-  const handleFriendSelected = (friend: any, chatId: string) => {
+  // 👇 1. Added the required missing states for FriendListProps
+  const [friends, setFriends] = useState<Friend[]>([]); 
+  const [activeTab, setActiveTab] = useState<"friends" | "sent" | "received">("friends");
+  const [sentRequests, setSentRequests] = useState<any[]>([]);
+  const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleFriendSelected = (friend: Friend, chatId: string) => {
     setSelectedFriend(friend);
     setChatId(chatId);
     setOpenChat(chatId);
@@ -21,17 +35,23 @@ const Chat = () => {
     <div className="flex h-screen">
       <div className="flex flex-col h-screen">
         <div className="sticky top-0 ">
+          {/* Note: You might want to pass setActiveTab here later if header manages tabs */}
           <FriendListHeader
             setSearchFriend={setSearchFriend}
             headerName="Friends"
           />
         </div>
         <div className="overflow-y-auto">
-          {/* Removed openChat={openChat} to satisfy FriendListProps restriction */}
+          {/* 👇 2. All required props are now properly passed down */}
           <FriendList
             onClickFriend={handleFriendSelected}
             chattingFriend={selectedFriend}
             searchFriend={searchFriend}
+            friends={friends}
+            activeTab={activeTab}
+            sentRequests={sentRequests}
+            receivedRequests={receivedRequests}
+            isLoading={isLoading}
           />
         </div>
       </div>

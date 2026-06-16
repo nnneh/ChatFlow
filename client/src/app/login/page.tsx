@@ -5,12 +5,17 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import toast, { Toaster } from "react-hot-toast";
 import { FaEnvelope, FaLock, FaArrowRight, FaFacebook, FaGoogle } from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
+
+interface LoginFormInput {
+  email: string;
+  password?: string;
+}
 
 const LoginForm = () => {
   const dispatch = useDispatch();
@@ -22,9 +27,9 @@ const LoginForm = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm();
+  } = useForm<LoginFormInput>();
 
-  const handleLogin = async (data) => {
+  const handleLogin: SubmitHandler<LoginFormInput> = async (data) => {
     try {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/login`, data, {
         withCredentials: true,
@@ -34,7 +39,6 @@ const LoginForm = () => {
         const { message, user, accessToken, refreshToken } = response.data;
 
         // --- ADDED FOR COOKIE DEBUGGING ---
-        // This evaluates if the server returned tokens directly in the body response
         console.log("Setting cookies:", { 
           accessToken: !!accessToken, 
           refreshToken: !!refreshToken 
@@ -46,7 +50,15 @@ const LoginForm = () => {
         router.push("chatflow/chat");
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Could not connect to the server. Please try again.";
+      // Handle the 'unknown' error type safely by checking if it's an Axios error
+      let errorMessage = "Could not connect to the server. Please try again.";
+      
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       toast.error(errorMessage);
       console.error("Login error context:", error);
     }
