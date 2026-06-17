@@ -9,28 +9,27 @@ interface GroupResponse {
 }
 
 const createGroup = async (name: string, members: string[]): Promise<string | undefined> => {
-    try {
-        const { data } = await axios.post<GroupResponse>(
-          `${process.env.NEXT_PUBLIC_API_URL}/group/makeGroup`,
-          { name, members },
-          { withCredentials: true }
-        );
-        
-        if (data) {
-            return 'Group Created Successfully';
-        }
-    } catch (error) {
-        // Cast the error to AxiosError to safely access response properties
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        
-        if (axiosError.response) {
-          console.log(axiosError.response.data.message);
-          return axiosError.response.data.message;
-        }
-        
-        console.error("An unexpected error occurred:", error);
-        return "An unexpected error occurred";
+  try {
+    const { data } = await axios.post<GroupResponse>(
+      `${process.env.NEXT_PUBLIC_API_URL}/group/makeGroup`,
+      { name, members },
+      { withCredentials: true }
+    );
+    
+    if (data) {
+      return "Group Created Successfully";
     }
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiErrorResponse>;
+    
+    if (axiosError.response) {
+      console.log(axiosError.response.data.message);
+      return axiosError.response.data.message;
+    }
+    
+    console.error("An unexpected error occurred:", error);
+    return "An unexpected error occurred";
+  }
 };
 
 export default createGroup;
