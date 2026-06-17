@@ -5,7 +5,8 @@ export type Friend = {
   username: string;
   email: string;
   avatar?: string;
-  online?: boolean;  
+  online?: boolean; 
+  chatId?: string; 
 };
 
 export type FriendListItem = {

@@ -2,15 +2,15 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import {
   persistStore,
   persistReducer,
-  PERSIST,
   FLUSH,
   REHYDRATE,
   PAUSE,
+  PERSIST,
   PURGE,
   REGISTER,
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import userReducer from "./features/userSlice";              // ← default export (the reducer)
+import userReducer from "./features/userSlice";
 import friendRequestDetailsSlice from "./features/friendRequestSlice";
 import friendListSlice from "./features/friendListSlice";
 import groupListSlice from "./features/groupSlice";
@@ -18,10 +18,11 @@ import groupListSlice from "./features/groupSlice";
 const persistConfig = {
   key: "root",
   storage,
+  whitelist: ["user"], // ✅ only persist user session
 };
 
 const rootReducer = combineReducers({
-  user: userReducer,                    // ← fixed: was loadUserInfo (action creator)
+  user: userReducer,
   requestDetails: friendRequestDetailsSlice,
   friendList: friendListSlice,
   groupList: groupListSlice,

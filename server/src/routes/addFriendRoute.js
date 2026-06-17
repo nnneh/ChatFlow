@@ -8,14 +8,11 @@ import User from "../models/userModel.js";
 const friendRequestRouter = express.Router();
 friendRequestRouter.use(verifyLogin);
 
-// ── Helper: get sender ID safely from req ──
 const getSenderId = (req) => {
-  // ✅ Expanded fallback chain to safely capture IDs across various auth middleware setups
   const id = req.userID ?? req.userId ?? req.user?._id ?? req.user?.id ?? req.user?.userId;
   return id ? id.toString() : null;
 };
 
-// 1. Send Friend Request
 // 1. Send Friend Request
 friendRequestRouter.post("/sendRequest/:username", async (req, res) => {
   try {
@@ -37,12 +34,11 @@ friendRequestRouter.post("/sendRequest/:username", async (req, res) => {
     const senderId = getSenderId(req);
 
     if (!senderId) {
-      console.error("❌ Auth Debug: senderId resolved to null.");
       return res.status(401).json({ message: "Unauthorized: could not identify sender from token" });
     }
 
     if (!mongoose.isValidObjectId(senderId) || !mongoose.isValidObjectId(receiverId)) {
-      return res.status(400).json({ message: "Invalid user ID tracking format" });
+      return res.status(400).json({ message: "Invalid user ID format" });
     }
 
     if (senderId === receiverId) {
@@ -60,20 +56,17 @@ friendRequestRouter.post("/sendRequest/:username", async (req, res) => {
       return res.status(409).json({ message: "Request already sent or users are already connected" });
     }
 
-    // ✅ FIXED: Explicitly set status to 'pending' on creation to guarantee matching the query below
-    const newRequestDoc = await AddFriendModel.create({ 
-      sender: senderId, 
+    const newRequestDoc = await AddFriendModel.create({
+      sender: senderId,
       receiver: receiverId,
-      status: "pending" 
+      status: "pending",
     });
 
-    // Populate the newly created document directly instead of running a broad .find()
     const populatedRequest = await AddFriendModel.findById(newRequestDoc._id).populate({
       path: "sender",
-      select: "-password -refreshToken"
+      select: "-password -refreshToken",
     });
 
-    // Structure formatting for real-time notification sockets
     const formattedData = {
       requestId: populatedRequest._id,
       sender: {
@@ -88,7 +81,6 @@ friendRequestRouter.post("/sendRequest/:username", async (req, res) => {
 
     const io = req.app.get("io");
     if (io) {
-      // It's cleaner to emit the single object instead of a wrapped array shell
       io.emit("new-friend-request", formattedData);
     }
 
@@ -122,14 +114,18 @@ friendRequestRouter.post("/acceptRequest/:id", async (req, res) => {
     friendRequestDoc.status = "accepted";
     await friendRequestDoc.save();
 
-    // Check if chat already exists before creating
     const existingChat = await IndividualChat.findOne({
-      participants: { $all: [friendRequestDoc.sender._id, friendRequestDoc.receiver._id], $size: 2 },
+      participants: {
+        $all: [friendRequestDoc.sender._id, friendRequestDoc.receiver._id],
+        $size: 2,
+      },
     });
 
-    const individualChat = existingChat ?? await IndividualChat.create({
-      participants: [friendRequestDoc.sender._id, friendRequestDoc.receiver._id],
-    });
+    const individualChat =
+      existingChat ??
+      (await IndividualChat.create({
+        participants: [friendRequestDoc.sender._id, friendRequestDoc.receiver._id],
+      }));
 
     const io = req.app.get("io");
     if (io) {
@@ -180,7 +176,7 @@ friendRequestRouter.post("/rejectRequest/:id", async (req, res) => {
   }
 });
 
-// 4. Get All Pending Friend Requests
+// 4. Get All Received Pending Requests
 friendRequestRouter.get("/allrequest", async (req, res) => {
   try {
     const currentUserId = getSenderId(req);
@@ -199,6 +195,7 @@ friendRequestRouter.get("/allrequest", async (req, res) => {
         online: f.sender.isOnline || false,
         avatar: f.sender.avatar,
       },
+      createdAt: f.createdAt, // ✅ was missing before
     }));
 
     return res.status(200).json({ message: "All Friend Requests", request: formattedData });
@@ -208,7 +205,7 @@ friendRequestRouter.get("/allrequest", async (req, res) => {
   }
 });
 
-// 5. Get All Sent Friend Requests
+// 5. Get All Sent Pending Requests
 friendRequestRouter.get("/sentrequests", async (req, res) => {
   try {
     const currentUserId = getSenderId(req);

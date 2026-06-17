@@ -2,71 +2,157 @@
 import FriendChat from "@/components/friendComponents/individualChat";
 import FriendList from "@/components/friendComponents/friendList";
 import FriendListHeader from "@/components/friendComponents/friendListHeader";
+import { getFriends, apiFetch, acceptRequest,rejectRequest,sendFriendRequest, getSentRequests,
+  getReceivedRequests,Friend, PendingRequest,ActiveTab
+ } from "@/app/api/getUserDetails";
 import { ArrowLeftIcon } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { toast, Toaster } from "react-hot-toast";
 
-// Matches the interface defined in your FriendList component
-interface Friend {
-  _id: string;
-  username: string;
-  avatar?: string;
-}
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 const Chat = () => {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [searchFriend, setSearchFriend] = useState("");
   const [chatId, setChatId] = useState("");
-  const [openChat, setOpenChat] = useState("");
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("friends");
+  const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
+  const [receivedRequests, setReceivedRequests] = useState<PendingRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 👇 1. Added the required missing states for FriendListProps
-  const [friends, setFriends] = useState<Friend[]>([]); 
-  const [activeTab, setActiveTab] = useState<"friends" | "sent" | "received">("friends");
-  const [sentRequests, setSentRequests] = useState<any[]>([]);
-  const [receivedRequests, setReceivedRequests] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const fetchChatData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [friendsRes, sent, received] = await Promise.all([
+        apiFetch(`${API}/friend`).catch(() => ({ Friends: [] })),
+        getSentRequests(),
+        getReceivedRequests(),
+        getFriends(),
+      ]);
 
-  const handleFriendSelected = (friend: Friend, chatId: string) => {
+      setFriends(Array.isArray(friendsRes?.Friends) ? friendsRes.Friends : []);
+      setSentRequests(sent);
+      setReceivedRequests(received);
+    } catch (err) {
+      console.error("Data fetch error:", err);
+      toast.error("Failed to load chat data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChatData();
+  }, [fetchChatData]);
+
+  const handleFriendSelected = (friend: Friend, derivedChatId: string) => {
     setSelectedFriend(friend);
-    setChatId(chatId);
-    setOpenChat(chatId);
+    setChatId(friend.chatId ||derivedChatId);
+  };
+
+  const handleAcceptRequest = (requestId: string) => {
+    toast.promise(
+      acceptRequest(requestId).then(() => fetchChatData()),
+      {
+        loading: "Accepting...",
+        success: "Friend request accepted!",
+        error: (err) => err.message || "Failed to accept request",
+      }
+    );
+  };
+
+  const handleRejectRequest = (requestId: string) => {
+    toast.promise(
+      rejectRequest(requestId).then(() => fetchChatData()),
+      {
+        loading: "Rejecting...",
+        success: "Request rejected",
+        error: (err) => err.message || "Failed to reject request",
+      }
+    );
+  };
+
+  const handleOpenAddFriendModal = () => {
+    const promptUsername = prompt("Enter target user's username:");
+    if (!promptUsername?.trim()) return;
+
+    toast.promise(
+      sendFriendRequest(promptUsername.trim()).then(() => fetchChatData()),
+      {
+        loading: "Sending invitation...",
+        success: "Friend request sent!",
+        error: (err) => err.message || "Failed to send request",
+      }
+    );
   };
 
   return (
-    <div className="flex h-screen">
-      <div className="flex flex-col h-screen">
-        <div className="sticky top-0 ">
-          {/* Note: You might want to pass setActiveTab here later if header manages tabs */}
-          <FriendListHeader
-            setSearchFriend={setSearchFriend}
-            headerName="Friends"
-          />
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-emerald-50 flex items-center justify-center p-0 sm:p-4">
+      <Toaster position="top-center" />
+      <div className="relative w-full max-w-7xl h-screen sm:h-[calc(100vh-2rem)] bg-white/60 backdrop-blur-2xl sm:rounded-3xl shadow-2xl border border-white/80 overflow-hidden flex">
+
+        {/* ── Sidebar ── */}
+        <div className={`${selectedFriend ? "hidden md:flex" : "flex"} flex-col w-full md:w-80 lg:w-96 h-full border-r border-pink-100/40 bg-white/40 shrink-0`}>
+          <div className="sticky top-0 z-10">
+            <FriendListHeader
+              setSearchFriend={setSearchFriend}
+              headerName="ChatFlow"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              sentCount={sentRequests.length}
+              receivedCount={receivedRequests.length}
+              onAddFriend={handleOpenAddFriendModal}
+            />
+          </div>
+          <div className="overflow-y-auto flex-1 relative">
+            <FriendList
+              onClickFriend={handleFriendSelected}
+              chattingFriend={selectedFriend}
+              searchFriend={searchFriend}
+              friends={friends}
+              activeTab={activeTab}
+              sentRequests={sentRequests}
+              receivedRequests={receivedRequests}
+              isLoading={isLoading}
+              onAcceptRequest={handleAcceptRequest}
+              onRejectRequest={handleRejectRequest}
+            />
+          </div>
         </div>
-        <div className="overflow-y-auto">
-          {/* 👇 2. All required props are now properly passed down */}
-          <FriendList
-            onClickFriend={handleFriendSelected}
-            chattingFriend={selectedFriend}
-            searchFriend={searchFriend}
-            friends={friends}
-            activeTab={activeTab}
-            sentRequests={sentRequests}
-            receivedRequests={receivedRequests}
-            isLoading={isLoading}
-          />
+
+        {/* ── Main chat area ── */}
+        <div className={`${selectedFriend ? "flex" : "hidden md:flex"} flex-1 flex-col overflow-hidden`}>
+          {selectedFriend ? (
+            <FriendChat friend={selectedFriend} chatId={chatId} />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none bg-white/10">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-pink-200 to-purple-200 flex items-center justify-center text-4xl mb-4 shadow-inner">
+                🌸
+              </div>
+              <h2 className="text-xl font-bold text-slate-700 mb-1">Your Space</h2>
+              <p className="text-xs text-slate-400 max-w-xs">
+                Select a friend from the roster view or dispatch an invite to initiate conversations.
+              </p>
+            </div>
+          )}
         </div>
       </div>
-      <div className="md:w-[calc(100vw-464px)] fixed top-0 right-0">
-        <FriendChat friend={selectedFriend} chatId={chatId} />
-      </div>
+
+      {/* ── Mobile full-screen overlay ── */}
       {selectedFriend && (
-        <div className="fixed sm:hidden inset-0 z-50 bg-gray-900">
-          <button 
-            onClick={() => setSelectedFriend(null)} 
-            className="absolute top-10  z-50 bg-gray-800 p-2 rounded-full"
-          >
-            <ArrowLeftIcon className="h-5 w-5 text-white" />
-          </button>
-          <FriendChat friend={selectedFriend} chatId={chatId} />
+        <div className="fixed sm:hidden inset-0 z-50 bg-white flex flex-col">
+          <div className="absolute top-3 left-4 z-50">
+            <button
+              onClick={() => setSelectedFriend(null)}
+              className="bg-pink-50 p-2.5 rounded-full"
+            >
+              <ArrowLeftIcon className="h-4 w-4 text-pink-600" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-hidden h-full">
+            <FriendChat friend={selectedFriend} chatId={chatId} />
+          </div>
         </div>
       )}
     </div>

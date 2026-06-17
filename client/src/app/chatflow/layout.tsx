@@ -2,39 +2,44 @@
 import socket from "@/lib/socket";
 import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
+import { RootState } from "@/lib/redux/store";
 
-interface RootLayoutProps {
-  children: React.ReactNode;
-}
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
+  const userObj = useSelector((state: RootState) => state.user?.userInfo);
+  const userId = userObj?._id;
 
-const Layout = ({ children }: RootLayoutProps) => {
-  const user = useSelector((state: any) => state.userInfo?.userInfo || null);
-
+  // ✅ Redirect to login if no user in persisted state
   useEffect(() => {
-    if (!user || !user._id) return;
-
-    if (socket.connected) {
-      socket.emit("login", user._id);
+    if (!userId) {
+      router.replace("/login");
     }
+  }, [userId]);
 
-    const handleConnect = () => {
-      if (user && user._id) {
-        socket.emit("login", user._id);
-      }
-    };
+  // ✅ Socket setup — only runs when userId is available
+  useEffect(() => {
+    if (!userId) return;
+
+    if (!socket.connected) socket.connect();
+    socket.emit("login", userId);
+
+    const handleConnect = () => socket.emit("login", userId);
+    const handleConnectError = (err: Error) =>
+      console.error("Socket connection failed:", err.message);
 
     socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectError);
 
     return () => {
       socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectError);
     };
-  }, [user]);
+  }, [userId]);
 
-  return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-emerald-50">
-      {children}
-    </div>
-  );
+  if (!userId) return null; // PersistGate handles the loading UI
+
+  return <div className="w-full min-h-screen">{children}</div>;
 };
 
 export default Layout;
