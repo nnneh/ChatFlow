@@ -67,7 +67,7 @@ export default function AddFriendModal({ onClose, onSubmit }: Props) {
               disabled={sending || !username.trim()}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium hover:opacity-90 shadow-md transition disabled:opacity-50"
             >
-              {sending ? "Sending..." : "Send Request 🌸"}
+              {sending ? "Sending..." : "Send Request"}
             </button>
           </div>
         </form>

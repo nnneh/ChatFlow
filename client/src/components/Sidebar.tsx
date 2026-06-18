@@ -3,29 +3,33 @@ import { useState } from "react";
 import {
   FaPlus, FaMagnifyingGlass, FaUserGroup, FaClock, FaInbox,
 } from "react-icons/fa6";
-import { Friend, PendingRequest, ActiveTab, UserProfile } from "../types";
 import Avatar from "./Avatar";
-import FriendsList from "./FriendsList";
-import AddFriendModal from "./AddFriendModal";
+import FriendList from "./friendComponents/friendList";
+import AddFriendModal from "./AddFriendButton";
+
+type ActiveTab = "friends" | "sent" | "received";
 
 type Props = {
-  profile: UserProfile | null;
-  friends: Friend[];
-  sentRequests: PendingRequest[];
-  receivedRequests: PendingRequest[];
+  profile: any;
+  friends: any[];
+  sentRequests: any[];
+  receivedRequests: any[];
   selectedFriendId?: string;
   isLoading: boolean;
-  hidden: boolean;                          // hide on mobile when chat/profile is open
-  onSelectFriend: (f: Friend) => void;
+  hidden: boolean;
+  onSelectFriend: (f: any) => void;
   onProfileClick: () => void;
-  onAccept: (req: PendingRequest) => void;
-  onReject: (req: PendingRequest) => void;
-  onCancelSent: (req: PendingRequest) => void;
+  onAccept: (req: any) => void;
+  onReject: (req: any) => void;
+  onCancelSent: (req: any) => void;
   onSendRequest: (username: string) => Promise<void>;
 };
 
 export default function Sidebar({
-  profile, friends, sentRequests, receivedRequests,
+  profile, 
+  friends = [],          
+  sentRequests = [],     
+  receivedRequests = [], 
   selectedFriendId, isLoading, hidden,
   onSelectFriend, onProfileClick,
   onAccept, onReject, onCancelSent, onSendRequest,
@@ -35,7 +39,7 @@ export default function Sidebar({
   const [modalOpen, setModalOpen]   = useState(false);
 
   const filteredFriends = friends.filter((f) =>
-    f.username.toLowerCase().includes(search.toLowerCase())
+    f?.username?.toLowerCase().includes(search.toLowerCase())
   );
 
   const tabs = [
@@ -46,10 +50,8 @@ export default function Sidebar({
 
   return (
     <>
-      <aside
-        className={`${hidden ? "hidden md:flex" : "flex"} w-full md:w-80 lg:w-96 flex-col border-r border-pink-100/60 bg-white/40`}
-      >
-        {/* Header */}
+      <aside className="w-full h-full flex flex-col bg-transparent">
+        {/* Header Content Panel */}
         <div className="p-5 border-b border-pink-100/60">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
@@ -73,7 +75,7 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search Inputs */}
           <div className="relative mb-4">
             <FaMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 text-pink-400 text-xs pointer-events-none" />
             <input
@@ -84,7 +86,7 @@ export default function Sidebar({
             />
           </div>
 
-          {/* Tabs */}
+          {/* Tab Subsystem Navigation items */}
           <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-medium text-slate-600">
             {tabs.map((tab) => (
               <button
@@ -106,19 +108,18 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* List */}
+        {/* Dynamic Display Rendering Portal list */}
         <div className="flex-1 overflow-y-auto p-2">
-          <FriendsList
-            activeTab={activeTab}
+          <FriendList
             friends={filteredFriends}
+            searchFriend={search}
+            activeTab={activeTab}
             sentRequests={sentRequests}
             receivedRequests={receivedRequests}
             selectedFriendId={selectedFriendId}
             isLoading={isLoading}
-            onSelectFriend={onSelectFriend}
-            onAccept={onAccept}
-            onReject={onReject}
-            onCancelSent={onCancelSent}
+            onClickFriend={onSelectFriend}
+            chattingFriend={null}
           />
         </div>
       </aside>

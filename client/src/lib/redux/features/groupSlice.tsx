@@ -69,17 +69,21 @@ export const groupListSlice = createSlice({
 
     groupMemberCountUpdate: (
       state,
-      action: PayloadAction<{ groupID: string | number; memberID: string; isAdd: boolean }>
+      // 1. Changed memberID type from string to string[]
+      action: PayloadAction<{ groupID: string | number; memberID: string[]; isAdd: boolean }>
     ) => {
       const { groupID, memberID, isAdd } = action.payload;
       
       if (isAdd) {
         state.groupList = state.groupList.map((g) => {
           if (g.chatId === groupID) {
-            // Don't add duplicate participants
-            if (!g.group.participants.some(p => p._id === memberID)) {
-              g.group.participants.push({ _id: memberID });
-            }
+            // 2. Loop through the array of incoming member IDs
+            memberID.forEach((id) => {
+              // Only push if the participant isn't already in the group
+              if (!g.group.participants.some(p => p._id === id)) {
+                g.group.participants.push({ _id: id });
+              }
+            });
             return g;
           }
           return g;
@@ -87,7 +91,8 @@ export const groupListSlice = createSlice({
       } else {
         state.groupList = state.groupList.map((g) => {
           if (g.chatId === groupID) {
-            g.group.participants = g.group.participants.filter((f) => f._id !== memberID);
+            // 3. Filter out all participants whose IDs are included in the memberID array
+            g.group.participants = g.group.participants.filter((p) => !memberID.includes(p._id));
             return g;
           }
           return g;

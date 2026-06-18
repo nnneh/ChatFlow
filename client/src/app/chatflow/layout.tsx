@@ -1,38 +1,51 @@
 "use client";
-import NavBar from "@/components/NavBar";
 import socket from "@/lib/socket";
-import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
+import { RootState } from "@/lib/redux/store";
+import NavBar from "@/components/Navbar";
+// import NavBar from "@/components/NavBar"; // ✅ import NavBar
 
-const layout = ({ children }) => {
+const Layout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
-  const user = useSelector((state) => state.userInfo.userInfo);
+  const userObj = useSelector((state: RootState) => state.user?.userInfo);
+  const userId = userObj?._id;
 
   useEffect(() => {
-    if (user && user._id) {
-      socket.emit("login", user._id);
+    if (!userId) {
+      router.replace("/login");
     }
-    // Handle socket reconnection
-    socket.on("connect", () => {
-      if (user && user._id) {
-        socket.emit("login", user._id);
-      }
-    });
+  }, [userId]);
 
-    // Cleanup when component unmounts
+  useEffect(() => {
+    if (!userId) return;
+
+    if (!socket.connected) socket.connect();
+    socket.emit("login", userId);
+
+    const handleConnect = () => socket.emit("login", userId);
+    const handleConnectError = (err: Error) =>
+      console.error("Socket connection failed:", err.message);
+
+    socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectError);
+
     return () => {
-      socket.off("connect");
+      socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectError);
     };
-  }, [user, router]);
+  }, [userId]);
+
+  if (!userId) return null;
+
+  // ✅ Render NavBar (which manages its own sections) — ignore children
+  // Children are the old sub-route pages, NavBar handles rendering internally
   return (
-    <div className="w-full h-screen flex">
-      <div className="fixed top-0 left-0 h-screen">
-        <NavBar />
-      </div>
-      <div className="ml-20">{children}</div>
+    <div className="w-full min-h-screen">
+      <NavBar />
     </div>
   );
 };
 
-export default layout;
+export default Layout;

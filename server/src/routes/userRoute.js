@@ -72,7 +72,7 @@ UserRouter.post("/register", upload.single("avatar"), async (req, res) => {
       message: "User registered successfully",
       accessToken, // also sent in body for clients that prefer header-based auth
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         avatar: user.avatar,
@@ -109,7 +109,7 @@ UserRouter.post("/login", async (req, res) => {
       message: "Login successful",
       accessToken,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         avatar: user.avatar,
@@ -176,7 +176,7 @@ UserRouter.get("/me", auth, async (req, res) => {
   try {
     res.json({
       user: {
-        id: req.user._id,
+        _id: req.user._id,
         username: req.user.username,
         email: req.user.email,
         avatar: req.user.avatar,

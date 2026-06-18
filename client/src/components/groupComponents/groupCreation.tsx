@@ -1,4 +1,12 @@
 "use client";
+
+import React, { useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { useDispatch, useSelector } from "react-redux";
+import toast from "react-hot-toast";
+import { Check, CircleMinus, Plus } from "lucide-react";
+import Image from "next/image";
+
 import createGroup from "@/app/api/createGroup";
 import getGroups from "@/app/api/getGroups";
 import { Button } from "@/components/ui/button";
@@ -8,38 +16,74 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { setGroupList } from "@/lib/redux/features/groupListSlice";
-import { Check, CircleMinus, Plus } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import toast from "react-hot-toast";
-import { useDispatch, useSelector } from "react-redux";
+import { setGroupList } from "@/lib/redux/features/groupSlice";
 
-const GroupCreationPopOver = () => {
-  const { friendList } = useSelector((state) => state.friendList);
+// --- Types & Interfaces ---
+export interface FriendDetails {
+  _id: string;
+  username: string;
+  avatar: string;
+}
 
-  const { register, handleSubmit } = useForm();
-  const [selectedFriends, setSelectedFriends] = useState([]);
+export interface FriendListItem {
+  friend: FriendDetails;
+}
+
+export interface RootState {
+  friendList: {
+    friendList: FriendListItem[];
+  };
+}
+
+export interface GroupFormData {
+  groupName: string;
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
+const GroupCreationPopOver: React.FC = () => {
+  const { friendList } = useSelector((state: RootState) => state.friendList);
   const dispatch = useDispatch();
 
-  const addFriend = (friend) => {
-    if (!selectedFriends.some((f) => f._id === friend._id)) {
+  const { register, handleSubmit } = useForm<GroupFormData>();
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+
+  const addFriend = (friend: FriendDetails): void => {
+    if (!selectedFriends.includes(friend._id)) {
       setSelectedFriends((prev) => [...prev, friend._id]);
     }
   };
 
+  const removeFriend = (friendId: string): void => {
+    setSelectedFriends((prev) => prev.filter((id) => id !== friendId));
+  };
 
-  const onSubmit = (data) => {
+  const onSubmit: SubmitHandler<GroupFormData> = (data) => {
     const name = data.groupName;
     const members = selectedFriends;
 
     createGroup(name, members)
-    .then((res) => {
-      toast.success(res)
-      getGroups().then((res) => dispatch(setGroupList(res)));
-    })
-    .catch((err) => toast.error(err));
+      .then((res: string | undefined) => {
+        // Handles the possibility of createGroup resolving to undefined
+        toast.success(res || "Group Created Successfully");
+        
+        // This is now 100% type-synchronized with your custom Redux actions
+        getGroups().then((groupRes) => {
+          dispatch(setGroupList(groupRes));
+        });
+      })
+      .catch((err: ApiError) => {
+        const errorMessage =
+          err?.response?.data?.message || err?.message || "An error occurred";
+        toast.error(errorMessage);
+      });
   };
 
   return (
@@ -47,9 +91,7 @@ const GroupCreationPopOver = () => {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={
-            "bg-gray-900 text-white border-none hover:bg-gray-900 hover:text-purple-500 transition-all duration-200"
-          }
+          className="bg-gray-900 text-white border-none hover:bg-gray-900 hover:text-purple-500 transition-all duration-200"
         >
           <Plus size={30} />
         </Button>
@@ -76,50 +118,49 @@ const GroupCreationPopOver = () => {
               <p className="text-lg">Add Member</p>
             </div>
             <div className="w-full max-h-64 overflow-y-auto">
-              {friendList.length > 0
-                ? friendList.map(({ friend }) => (
-                    <div
-                      key={friend._id}
-                      className="flex items-center justify-between border-b p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <Image
-                            src={friend.avatar}
-                            height={50}
-                            width={50}
-                            alt="Profile_image"
-                            className="rounded-full h-12 w-12"
-                          />
-                        </div>
-                        <div>{friend.username}</div>
+              {friendList && friendList.length > 0 ? (
+                friendList.map(({ friend }) => (
+                  <div
+                    key={friend._id}
+                    className="flex items-center justify-between border-b p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-12">
+                        <Image
+                          src={friend.avatar}
+                          alt={`${friend.username}'s profile`}
+                          fill
+                          sizes="48px"
+                          className="rounded-full object-cover"
+                        />
                       </div>
-                      <div className="flex gap-2">
-                        {selectedFriends.includes(friend._id) ? (
-                          <>
-                            <Check size={20} className="text-purple-500" />
-                            <CircleMinus
-                              size={20}
-                              className="text-red-500"
-                              onClick={() =>
-                                setSelectedFriends((prev) =>
-                                  prev.filter((f) => f !== friend._id)
-                                )
-                              }
-                            />
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => addFriend(friend)}
-                          >
-                            <Plus size={20} />
-                          </button>
-                        )}
-                      </div>
+                      <div>{friend.username}</div>
                     </div>
-                  ))
-                : "No Friends Found"}
+                    <div className="flex gap-2">
+                      {selectedFriends.includes(friend._id) ? (
+                        <>
+                          <Check size={20} className="text-purple-500" />
+                          <CircleMinus
+                            size={20}
+                            className="text-red-500 cursor-pointer"
+                            onClick={() => removeFriend(friend._id)}
+                          />
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => addFriend(friend)}
+                          className="focus:outline-none"
+                        >
+                          <Plus size={20} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-gray-400">No Friends Found</div>
+              )}
             </div>
             <Button
               type="submit"
