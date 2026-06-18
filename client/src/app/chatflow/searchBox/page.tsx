@@ -19,7 +19,8 @@ interface ApiResponse {
   user: User[];
 }
 
-const Search: React.FC = () => {
+// ✅ Renamed from Search to SearchPage to prevent duplicate identifier errors
+const SearchPage: React.FC = () => {
   const [search, setSearch] = useState<string>("");
   // Type the state array as User[]
   const [users, setUsers] = useState<User[]>([]);
@@ -33,7 +34,7 @@ const Search: React.FC = () => {
     const getAllUsers = async (): Promise<void> => {
       try {
         const res = await axios.get<ApiResponse>(
-          (process.env.NEXT_PUBLIC_URL || "") + "/allusers",
+          (process.env.NEXT_PUBLIC_API_URL || "") + "user/users",
           { withCredentials: true }
         );
   
@@ -82,4 +83,4 @@ const Search: React.FC = () => {
   );
 };
 
-export default Search;
+export default SearchPage;

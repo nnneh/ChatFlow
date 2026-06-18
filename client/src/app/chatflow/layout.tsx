@@ -4,20 +4,20 @@ import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/lib/redux/store";
+import NavBar from "@/components/Navbar";
+// import NavBar from "@/components/NavBar"; // ✅ import NavBar
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const userObj = useSelector((state: RootState) => state.user?.userInfo);
   const userId = userObj?._id;
 
-  // ✅ Redirect to login if no user in persisted state
   useEffect(() => {
     if (!userId) {
       router.replace("/login");
     }
   }, [userId]);
 
-  // ✅ Socket setup — only runs when userId is available
   useEffect(() => {
     if (!userId) return;
 
@@ -37,9 +37,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     };
   }, [userId]);
 
-  if (!userId) return null; // PersistGate handles the loading UI
+  if (!userId) return null;
 
-  return <div className="w-full min-h-screen">{children}</div>;
+  // ✅ Render NavBar (which manages its own sections) — ignore children
+  // Children are the old sub-route pages, NavBar handles rendering internally
+  return (
+    <div className="w-full min-h-screen">
+      <NavBar />
+    </div>
+  );
 };
 
 export default Layout;

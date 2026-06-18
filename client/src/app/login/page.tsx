@@ -84,8 +84,11 @@ const LoginForm = () => {
       // ✅ No manual Cookies.set — server already did it httpOnly
       dispatch(loadUserInfo(user));
       toast.success(`${message} to ${user.username}`);
-      // router.push("/chatflow/chat");
-      window.location.href = "/chatflow/chat";
+      router.push("/chatflow/chat");
+      // window.location.href = "/chatflow/chat";
+      // router.push("/chatflow");
+      // window.location.href = "/chatflow"
+
     }
   } catch (error) {
     let errorMessage = "Could not connect to the server. Please try again.";

@@ -37,7 +37,7 @@ export interface SelectGroupDetails {
 
 interface GroupInfoPopOverProps {
   selectGroup: SelectGroupDetails;
-  chatId: string | number;
+  chatId: string; // ✅ MongoDB _id is always a string — removed number
 }
 
 interface UserInfo {
@@ -66,35 +66,41 @@ const GroupInfoPopOver: React.FC<GroupInfoPopOverProps> = ({ selectGroup, chatId
   const dispatch = useDispatch();
 
   const handleRemoveMember = (memberId: string): void => {
+    // ✅ chatId is now string — no conversion needed
     removeGroupMember({ groupID: chatId, memberID: memberId })
-      .then((res: string) => {
+      .then((res) => {
         toast.success(res || "Member removed");
       })
-      .catch((err: ApiError | any) => {
-        const errorMsg = err?.response?.data?.message || err?.message || "Failed to remove member";
+      .catch((err: ApiError) => {
+        const errorMsg =
+          err?.response?.data?.message || err?.message || "Failed to remove member";
         toast.error(errorMsg);
       });
   };
 
-  const handleLeaveGroup = (groupId: string | number): void => {
-    leaveGroup(groupId)
-      .then((res: string) => {
+  const handleLeaveGroup = (): void => {
+    // ✅ Use chatId directly from component scope — no need to pass as param
+    leaveGroup(chatId)
+      .then((res) => {
         toast.success(res || "Left the group");
       })
-      .catch((err: ApiError | any) => {
-        const errorMsg = err?.response?.data?.message || err?.message || "Failed to leave group";
+      .catch((err: ApiError) => {
+        const errorMsg =
+          err?.response?.data?.message || err?.message || "Failed to leave group";
         toast.error(errorMsg);
       });
   };
 
-  const handleGroupDeletion = (groupId: string | number): void => {
-    groupDeletion(groupId)
-      .then((res: string) => {
+  const handleGroupDeletion = (): void => {
+    // ✅ Use chatId directly from component scope — no need to pass as param
+    groupDeletion(chatId)
+      .then((res) => {
         toast.success(res || "Group deleted");
         getGroups().then((groupRes) => dispatch(setGroupList(groupRes)));
       })
-      .catch((err: ApiError | any) => {
-        const errorMsg = err?.response?.data?.message || err?.message || "Failed to delete group";
+      .catch((err: ApiError) => {
+        const errorMsg =
+          err?.response?.data?.message || err?.message || "Failed to delete group";
         toast.error(errorMsg);
       });
   };
@@ -106,25 +112,25 @@ const GroupInfoPopOver: React.FC<GroupInfoPopOverProps> = ({ selectGroup, chatId
           <BsFillInfoCircleFill size={18} />
         </button>
       </PopoverTrigger>
-      
+
       <PopoverContent className="w-80 bg-white/95 backdrop-blur-md border border-pink-100 rounded-2xl shadow-lg max-h-[80vw] p-4 overflow-hidden text-slate-800">
         <div className="flex flex-col h-full space-y-3">
-          
-          {/* Header Layout (Matches Header title layout) */}
+
+          {/* Header */}
           <div className="flex items-center justify-between border-b border-pink-100/40 pb-2">
             <h1 className="text-lg font-bold tracking-tight text-slate-800 truncate max-w-[150px]">
               {selectGroup?.groupName}
             </h1>
             {userInfo?._id === selectGroup?.groupAdmin ? (
-              <Button 
-                onClick={() => handleGroupDeletion(chatId)} 
+              <Button
+                onClick={handleGroupDeletion} // ✅ No argument needed
                 className="text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 h-7 rounded-xl transition-all duration-200 px-2.5 shadow-none"
               >
                 Delete Group
               </Button>
             ) : (
               <Button
-                onClick={() => handleLeaveGroup(chatId)}
+                onClick={handleLeaveGroup} // ✅ No argument needed
                 className="text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 h-7 rounded-xl transition-all duration-200 px-3 shadow-none"
               >
                 Leave
@@ -132,23 +138,23 @@ const GroupInfoPopOver: React.FC<GroupInfoPopOverProps> = ({ selectGroup, chatId
             )}
           </div>
 
-          {/* Members Title Area */}
+          {/* Members Title */}
           <div className="flex justify-between items-center px-0.5">
             <p className="text-sm font-semibold text-slate-500">Members</p>
-            <AddMembers chatId={chatId} />
+            <AddMembers chatId={chatId} /> {/* ✅ Already a string */}
           </div>
 
-          {/* Container List Box (Matches GroupList styling system) */}
+          {/* Members List */}
           <div className="space-y-1 overflow-y-auto pr-0.5 max-h-[50vh]">
             {selectGroup?.participants?.map((p) => {
               const isUserAdmin = selectGroup?.groupAdmin === p?._id;
-              
+
               return (
                 <div
                   key={p?._id}
                   className="flex items-center gap-3 p-2.5 rounded-xl transition-all duration-200 hover:bg-slate-50 border border-transparent hover:border-slate-100/50 group"
                 >
-                  {/* Participant Avatar */}
+                  {/* Avatar */}
                   <div className="relative h-9 w-9 shrink-0">
                     <Image
                       src={p?.avatar || "/default-avatar.png"}
@@ -159,7 +165,7 @@ const GroupInfoPopOver: React.FC<GroupInfoPopOverProps> = ({ selectGroup, chatId
                     />
                   </div>
 
-                  {/* Profile Info Details */}
+                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h2 className="text-sm font-semibold text-slate-700 truncate">
@@ -173,12 +179,10 @@ const GroupInfoPopOver: React.FC<GroupInfoPopOverProps> = ({ selectGroup, chatId
                         />
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 truncate">
-                      {p?.email}
-                    </p>
+                    <p className="text-xs text-slate-400 truncate">{p?.email}</p>
                   </div>
 
-                  {/* Remove Button Actions */}
+                  {/* Remove Button */}
                   <div className="shrink-0 flex items-center">
                     {selectGroup?.groupAdmin === userInfo?._id && !isUserAdmin && (
                       <Button
