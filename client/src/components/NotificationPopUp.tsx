@@ -13,7 +13,7 @@ import axios, { AxiosError } from "axios";
 import { getFriends } from "@/app/api/getUserDetails";
 import { loadUserInfo } from "@/lib/redux/features/userSlice";
 import { removeFriendRequestDetails } from "@/lib/redux/features/friendRequestSlice";
-import type { RootState, AppDispatch } from "@/lib/redux/store"; // ← import from store
+import type { RootState, AppDispatch } from "@/lib/redux/store";
 
 interface Sender {
   avatar: string;
@@ -74,65 +74,91 @@ const NotificationPopUp = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <span className="relative">
-          <Bell
-            size={25}
-            className="text-zinc-200 transition-all duration-200"
-          />
+        <button 
+          className="relative p-2.5 text-pink-500 hover:text-pink-600 bg-pink-50 hover:bg-pink-100/80 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pink-200/50"
+          title="Notifications"
+        >
+          <Bell className="h-4 w-4" />
           {requests.length > 0 && (
-            <span className="absolute -top-3 -right-1 text-indigo-500 z-10 font-extrabold">
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
               {requests.length}
             </span>
           )}
-        </span>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 bg-gray-900 border-zinc-200">
-        <div className="text-slate-50 flex flex-col gap-4">
-          <div className="font-semibold text-2xl decoration-1 underline-offset-8 underline">
-            Friend Request
+
+      <PopoverContent className="w-96 bg-white rounded-2xl shadow-xl border border-pink-100 overflow-hidden p-0">
+        <div className="flex flex-col">
+          {/* Header with matching pink-purple gradient */}
+          <div className="flex items-center justify-between p-4 border-b border-pink-100/60 bg-gradient-to-r from-pink-50 to-purple-50">
+            <h3 className="font-bold text-slate-700 text-base">Friend Requests</h3>
+            {requests.length > 0 && (
+              <span className="text-[11px] bg-pink-100 text-pink-600 font-semibold px-2 py-0.5 rounded-full">
+                {requests.length} pending
+              </span>
+            )}
           </div>
-          {requests.length > 0 ? (
-            requests.map(({ sender, requestId }: FriendRequest) => (
-              <div
-                key={requestId}
-                className="flex items-center justify-between border p-3 rounded-md"
-              >
-                <div className="flex items-center gap-3">
-                  <div>
-                    <Image
-                      src={sender?.avatar}
-                      height={50}
-                      width={50}
-                      alt="Profile_image"
-                      className="h-16 w-16 rounded-full border-gray-200"
-                    />
+
+          {/* List Area */}
+          <div className="p-3 space-y-1 max-h-[320px] overflow-y-auto">
+            {requests.length > 0 ? (
+              requests.map(({ sender, requestId }: FriendRequest) => (
+                <div
+                  key={requestId}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-transparent hover:bg-slate-50 transition duration-200"
+                >
+                  {/* User Details */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-200 to-purple-300 flex items-center justify-center text-sm font-semibold text-purple-700 shrink-0 overflow-hidden relative border border-pink-100">
+                      {sender?.avatar ? (
+                        <Image
+                          src={sender.avatar}
+                          fill
+                          alt={`${sender.username}'s avatar`}
+                          className="object-cover"
+                        />
+                      ) : (
+                        sender?.username?.[0]?.toUpperCase() || "U"
+                      )}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <h4 className="text-sm font-semibold text-slate-700 truncate">
+                        {sender?.username}
+                      </h4>
+                      <p className="text-xs text-slate-400 truncate">
+                        {sender?.email}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <h4 className="font-medium leading-none text-white">
-                      {sender?.username}
-                    </h4>
-                    <p className="text-sm text-zinc-400">{sender?.email}</p>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-1.5 items-center shrink-0 ml-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleAccept(requestId)}
+                      className="h-8 px-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-medium hover:opacity-90 shadow-sm transition-all flex items-center gap-1 border-0"
+                    >
+                      <Check size={14} className="stroke-[3]" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDecline(requestId)}
+                      className="h-8 w-8 rounded-xl p-0 border border-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+                    >
+                      <RxCross1 size={13} className="stroke-[2.5]" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1 items-center">
-                  <Button
-                    onClick={() => handleAccept(requestId)}
-                    className="font-extrabold bg-purple-500 text-white hover:bg-purple-600 transition-all duration-300 px-3 py-1 flex items-center justify-center"
-                  >
-                    <Check size={18} />
-                  </Button>
-                  <Button
-                    onClick={() => handleDecline(requestId)}
-                    className="font-extrabold bg-red-500 text-white hover:bg-red-600 transition-all duration-300 px-3 py-1 flex items-center justify-center"
-                  >
-                    <RxCross1 size={18} />
-                  </Button>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-xs text-slate-400">
+                  No pending requests. All clear! ✨
+                </p>
               </div>
-            ))
-          ) : (
-            <span>No Request</span>
-          )}
+            )}
+          </div>
         </div>
       </PopoverContent>
     </Popover>

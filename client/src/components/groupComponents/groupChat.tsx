@@ -31,12 +31,13 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // ✅ Fetch message history
   useEffect(() => {
     if (!chatId) return;
     const fetchMessages = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`${API}/myMessages/${chatId}`, {
+        const res = await fetch(`${API}/myMessages/${chatId}`, { // ✅ no prefix
           credentials: "include",
         });
         if (res.status === 404) { setMessages([]); return; }
@@ -62,6 +63,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
     fetchMessages();
   }, [chatId]);
 
+  // ✅ Socket — join room and listen
   useEffect(() => {
     if (!chatId) return;
     socket.emit("join-chat", chatId);
@@ -84,17 +86,19 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
     return () => { socket.off("receive-message", handleReceiveMessage); };
   }, [chatId]);
 
+  // ✅ Auto scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ✅ Send message
   const handleSendSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim() || !chatId) return;
     const text = messageText.trim();
     setMessageText("");
     try {
-      const res = await fetch(`${API}/sendMessage/${chatId}`, {
+      const res = await fetch(`${API}/sendMessage/${chatId}`, { // ✅ no prefix
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -111,10 +115,11 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
     }
   };
 
+  // ✅ Leave group
   const handleLeaveGroup = async () => {
     if (!confirm(`Leave ${group?.groupName}?`)) return;
     try {
-      const res = await fetch(`${API}/leaveGroup/${chatId}`, {
+      const res = await fetch(`${API}/leaveGroup/${chatId}`, { // ✅ no prefix
         method: "DELETE",
         credentials: "include",
       });
@@ -143,7 +148,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
     );
   }
 
-  const initials = group.groupName.substring(0, 2).toUpperCase();
+  const groupInitials = group.groupName.substring(0, 2).toUpperCase();
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -152,7 +157,7 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
       <header className="h-16 border-b border-pink-100/60 px-6 flex items-center justify-between bg-white/50 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-200 to-purple-300 flex items-center justify-center text-xs font-bold text-purple-700">
-            {initials}
+            {groupInitials}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-800">{group.groupName}</h3>
@@ -189,28 +194,25 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
                 key={index}
                 className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
               >
-                {/* Friend avatar — left side only */}
+                {/* Friend avatar — received only */}
                 {!isMe && (
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-200 to-purple-300 flex items-center justify-center text-[10px] font-bold text-purple-700 shrink-0">
                     {msg.sender?.substring(0, 2).toUpperCase()}
                   </div>
                 )}
 
-                <div className={`max-w-[70%] ${!isMe ? "items-start" : "items-end"} flex flex-col`}>
-                  {/* Sender name above bubble for received messages */}
+                <div className={`max-w-[70%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                  {/* Sender name — received only */}
                   {!isMe && (
                     <span className="text-[10px] text-slate-400 mb-1 ml-1 font-medium">
                       {msg.sender}
                     </span>
                   )}
-
-                  <div
-                    className={`px-4 py-2.5 text-sm rounded-2xl shadow-sm ${
-                      isMe
-                        ? "bg-gradient-to-r from-pink-400 to-purple-400 text-white rounded-br-sm"
-                        : "bg-white text-slate-700 border border-pink-100 rounded-bl-sm"
-                    }`}
-                  >
+                  <div className={`px-4 py-2.5 text-sm rounded-2xl shadow-sm ${
+                    isMe
+                      ? "bg-gradient-to-r from-pink-400 to-purple-400 text-white rounded-br-sm"
+                      : "bg-white text-slate-700 border border-pink-100 rounded-bl-sm"
+                  }`}>
                     <p>{msg.content}</p>
                     <p className={`text-[10px] mt-1 ${isMe ? "text-white/70 text-right" : "text-slate-400"}`}>
                       {msg.createdAt}
@@ -218,10 +220,10 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, chatId, currentUserId }) =
                   </div>
                 </div>
 
-                {/* Your avatar — right side only */}
+                {/* Your avatar — sent only */}
                 {isMe && (
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-200 to-pink-300 flex items-center justify-center text-[10px] font-bold text-indigo-700 shrink-0">
-                    {initials}
+                    {groupInitials}
                   </div>
                 )}
               </div>
