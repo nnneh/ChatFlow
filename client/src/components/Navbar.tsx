@@ -63,14 +63,16 @@ const NavBar = () => {
       }
     };
     getAllRequest();
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const newSocket = io(`${process.env.NEXT_PUBLIC_API_URL}`, {
       withCredentials: true,
     });
     setSocket(newSocket);
-    return () => { newSocket.disconnect(); };
+    return () => {
+      newSocket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -78,10 +80,21 @@ const NavBar = () => {
       socket.on("user-offline", (userId: string) => {
         dispatch(updateFriendOnlineStatus({ userId, isOnline: false }));
       });
-      socket.on("new-friend-request", (data: any[]) => {
-        const d = data[0];
-        if (d.receiver === userInfo?._id) {
-          dispatch(addFriendRequestDetails(d));
+
+      socket.on("new-friend-request", (data: any) => {
+        // Guard check: Ensure data is valid and has contents
+        if (!data) return;
+
+        // If backend sends an array containing the data object
+        if (Array.isArray(data) && data.length > 0) {
+          const d = data[0];
+          if (d && d.receiver === userInfo?._id) {
+            dispatch(addFriendRequestDetails(d));
+          }
+        } 
+        // fallback: If backend directly emits a raw object instead of an array
+        else if (!Array.isArray(data) && data.receiver === userInfo?._id) {
+          dispatch(addFriendRequestDetails(data));
         }
       });
     }
@@ -91,7 +104,7 @@ const NavBar = () => {
         socket.off("new-friend-request");
       }
     };
-  }, [socket, userInfo?._id]);
+  }, [socket, userInfo?._id, dispatch]);
 
   const handleLogout = async () => {
     try {
@@ -127,7 +140,6 @@ const NavBar = () => {
 
           {/* Logo mark */}
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center mb-4 shadow-md shrink-0">
-            {/* <span className="text-white text-xs font-bold tracking-tight">CF</span> */}
             <Image className="object-contain" src="/Pastel Chatflow Logo.png" alt="Logo" width={120} height={120} priority />
           </div>
 
@@ -240,7 +252,7 @@ const NavBar = () => {
       <div className="flex-1 overflow-hidden">
         {activeSection === "chat"   && <Chat />}
         {activeSection === "group"  && <Group />}
-        {/* {activeSection === "search" && <Search />} */}
+        {activeSection === "search" && <Search />}
       </div>
     </div>
   );

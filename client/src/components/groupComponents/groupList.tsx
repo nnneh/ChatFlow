@@ -12,6 +12,7 @@ interface GroupListProps {
   handleGroupSelect: (group: GroupType, chatId: string) => void;
   selectGroup: GroupType | null;
   searchGroup: string;
+  onRefresh?: () => void;
 }
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -27,15 +28,10 @@ const GroupList: React.FC<GroupListProps> = ({
   const fetchGroups = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API}/myGroups`, {
+      const res = await fetch(`${API}/myGroups`, { // ✅ no prefix needed
         credentials: "include",
       });
-
-      if (res.status === 404) {
-        setGroups([]);
-        return;
-      }
-
+      if (res.status === 404) { setGroups([]); return; }
       const data = await res.json();
       setGroups(data.groups || []);
     } catch (err) {
@@ -81,23 +77,17 @@ const GroupList: React.FC<GroupListProps> = ({
                   : "hover:bg-slate-100 text-slate-700 hover:text-slate-900"
               }`}
             >
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm ${
-                  isActive
-                    ? "bg-gradient-to-br from-pink-200 to-purple-300 text-purple-700"
-                    : "bg-slate-200 text-slate-600"
-                }`}
-              >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-semibold text-sm ${
+                isActive
+                  ? "bg-gradient-to-br from-pink-200 to-purple-300 text-purple-700"
+                  : "bg-slate-200 text-slate-600"
+              }`}>
                 <UsersIcon className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2
-                  className={`text-sm truncate ${
-                    isActive
-                      ? "font-semibold text-slate-800"
-                      : "font-medium text-slate-700"
-                  }`}
-                >
+                <h2 className={`text-sm truncate ${
+                  isActive ? "font-semibold text-slate-800" : "font-medium text-slate-700"
+                }`}>
                   {group.groupName}
                 </h2>
                 <p className="text-xs text-slate-400 truncate mt-0.5">

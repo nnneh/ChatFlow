@@ -59,13 +59,13 @@ groupRouter.post("/makeGroup", async (req, res) => {
     };
 
     const io = req.app.get("io");
-    const onlineUser = global.onlineUser;
+    const onlineUser = global.onlineUser || {};
 
     members.forEach((memberId) => {
       if (memberId !== req.userID) {
         const socketId = onlineUser[memberId];
         if (socketId) {
-          io.emit("new-group-creation", groupData);
+          io.to(socketId).emit("new-group-creation", groupData);;
         }
       }
     });
